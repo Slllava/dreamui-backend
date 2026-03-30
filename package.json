@@ -1,0 +1,30 @@
+{
+  "name": "dreamui-backend",
+  "version": "1.0.0",
+  "description": "Directus backend prepared for Railway deployment",
+  "private": true,
+  "scripts": {
+    "dev": "directus start",
+    "bootstrap": "directus bootstrap",
+    "start": "directus bootstrap && directus start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Slllava/dreamui-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Slllava/dreamui-backend/issues"
+  },
+  "homepage": "https://github.com/Slllava/dreamui-backend#readme",
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10"
+  },
+  "dependencies": {
+    "directus": "^11.17.1",
+    "pg": "^8.20.0"
+  }
+}

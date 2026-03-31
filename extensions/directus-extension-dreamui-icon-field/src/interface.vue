@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" class="dreamui-icon-field">
+  <div class="dreamui-icon-field">
     <div class="dreamui-icon-field__toolbar">
       <label class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Library</span>
@@ -9,7 +9,7 @@
         </select>
       </label>
 
-      <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control dreamui-icon-field__control--stroke">
+      <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Stroke width</span>
 
         <div class="dreamui-icon-field__stroke-controls">
@@ -23,7 +23,6 @@
 
           <VInput
             v-model="strokeWidthInput"
-            class="dreamui-icon-field__stroke-input"
             type="number"
             min="0.5"
             max="4"
@@ -46,83 +45,93 @@
     <div class="dreamui-icon-field__control">
       <span class="dreamui-icon-field__label">Icons</span>
 
-      <div class="dreamui-icon-field__dropdown">
-        <button
-          type="button"
-          class="dreamui-icon-field__trigger"
-          :class="{ 'dreamui-icon-field__trigger--open': isOpen }"
-          @click="toggleOpen"
-        >
-          <span class="dreamui-icon-field__trigger-value">
-            <span v-if="selectedIcon" class="dreamui-icon-field__trigger-icon">
-              <component :is="IconRenderer" :icon="selectedIcon" :size="18" :stroke-width="currentStrokeWidth" />
-            </span>
-            <span :class="{ 'dreamui-icon-field__trigger-text--active': selectedIcon }">
-              {{ selectedIcon ? selectedIcon.label : 'Search for icon...' }}
-            </span>
-          </span>
-
-          <span
-            v-if="selectedIcon"
-            class="dreamui-icon-field__clear-button"
-            @click.stop="clearValue"
+      <VMenu v-model="menuActive" attached no-focus-return>
+        <template #activator="{ active, activate, deactivate, toggle }">
+          <VInput
+            v-model="searchQuery"
+            :placeholder="selectedIcon ? selectedIcon.label : 'Search for icon...'"
+            :class="{ 'has-value': selectedIcon }"
+            :nullable="false"
+            @click="onClickInput($event, toggle)"
+            @keydown="onKeydownInput($event, activate)"
           >
-            <VIcon name="close" />
-          </span>
-          <VIcon v-else :name="isOpen ? 'expand_less' : 'expand_more'" small />
-        </button>
-
-        <div v-if="isOpen" class="dreamui-icon-field__menu">
-          <div class="dreamui-icon-field__icons">
-            <template v-if="groupedIcons.length > 0">
-              <section
-                v-for="group in groupedIcons"
-                :key="group.title"
-                class="dreamui-icon-field__section"
-              >
-                <div class="dreamui-icon-field__section-header">
-                  <span>{{ group.title }}</span>
-                </div>
-
-                <div class="dreamui-icon-field__section-grid">
-                  <button
-                    v-for="icon in group.icons"
-                    :key="icon.id"
-                    type="button"
-                    class="dreamui-icon-field__icon-button"
-                    :class="{ 'dreamui-icon-field__icon-button--active': icon.id === selectedIconId }"
-                    :title="icon.label"
-                    @click="selectIcon(icon.id)"
-                  >
-                    <component :is="IconRenderer" :icon="icon" :size="18" :stroke-width="currentStrokeWidth" />
-                  </button>
-                </div>
-              </section>
+            <template v-if="selectedIcon" #prepend>
+              <component
+                :is="IconRenderer"
+                class="selected-icon"
+                :icon="selectedIcon"
+                :size="20"
+                :stroke-width="currentStrokeWidth"
+              />
             </template>
 
-            <div v-else class="dreamui-icon-field__empty">
-              No icons found
-            </div>
-          </div>
+            <template #append>
+              <div class="item-actions">
+                <VRemove
+                  v-if="selectedIcon"
+                  deselect
+                  @action="
+                    () => {
+                      clearValue();
+                      deactivate();
+                    }
+                  "
+                />
 
-          <div class="dreamui-icon-field__search">
-            <VInput
-              v-model="query"
-              placeholder="Search for icon..."
-              @update:model-value="onQueryChange"
-            />
+                <VIcon
+                  v-else
+                  clickable
+                  name="expand_more"
+                  class="open-indicator"
+                  :class="{ open: active }"
+                  @click="toggle"
+                />
+              </div>
+            </template>
+          </VInput>
+        </template>
+
+        <div ref="contentRef" class="select-icon-popover">
+          <template v-for="group in groupedIcons" :key="group.name">
+            <VDivider v-if="group.icons.length > 0" inline-title class="icon-row icon-row--header">
+              {{ group.name }}
+            </VDivider>
+
+            <div
+              v-if="group.icons.length > 0"
+              class="icon-row"
+              :style="{
+                '--icons-per-row': iconsPerRow,
+                '--icon-size': `${iconSize}px`,
+                '--gap': `${gap}px`,
+              }"
+            >
+              <button
+                v-for="icon in group.icons"
+                :key="icon.id"
+                type="button"
+                class="dreamui-icon-button"
+                :class="{ active: icon.id === selectedIconId }"
+                :title="icon.label"
+                @click="selectIcon(icon)"
+              >
+                <component :is="IconRenderer" :icon="icon" :size="20" :stroke-width="currentStrokeWidth" />
+              </button>
+            </div>
+          </template>
+
+          <div v-if="groupedIcons.length === 0 || groupedIcons.every((group) => group.icons.length === 0)" class="dreamui-empty">
+            No icons found
           </div>
         </div>
-      </div>
+      </VMenu>
     </div>
-
-    <code v-if="value" class="dreamui-icon-field__value">{{ value }}</code>
   </div>
 </template>
 
 <script lang="ts">
-import type { Component, PropType } from 'vue';
-import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import type { Component, PropType, Ref } from 'vue';
+import { computed, defineComponent, h, nextTick, onUnmounted, ref, watch } from 'vue';
 import * as lucideIcons from 'lucide';
 import * as remixIcons from '@remixicon/vue';
 
@@ -142,12 +151,13 @@ type IconOption = {
   label: string;
   library: IconLibrary;
   name: string;
-  section: string;
+  group: string;
   component?: Component;
   iconNode?: LucideNode;
 };
 
 const DEFAULT_STROKE_WIDTH = 2;
+const MIN_ITEM_SIZE = 32;
 
 const LucideRenderer = defineComponent({
   name: 'LucideRenderer',
@@ -230,11 +240,6 @@ function toRemixLabel(name: string): string {
   return name.replace(/^Ri/, '').replace(/Icon$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim();
 }
 
-function getSectionFromLabel(label: string): string {
-  const [firstWord] = label.split(' ');
-  return firstWord ? firstWord[0]?.toUpperCase() ?? 'Other' : 'Other';
-}
-
 const lucideList = Object.entries(lucideIcons)
   .filter(([name, iconNode]) => {
     return (
@@ -248,7 +253,7 @@ const lucideList = Object.entries(lucideIcons)
     label: toLucideLabel(name),
     library: 'lucide' as const,
     name,
-    section: getSectionFromLabel(toLucideLabel(name)),
+    group: 'Lucide',
     iconNode: iconNode as LucideNode,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
@@ -260,7 +265,7 @@ const remixList = Object.entries(remixIcons)
     label: toRemixLabel(name),
     library: 'remix' as const,
     name,
-    section: getSectionFromLabel(toRemixLabel(name)),
+    group: name.endsWith('Line') ? 'Line' : name.endsWith('Fill') ? 'Fill' : 'Remix',
     component: component as Component,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
@@ -275,32 +280,60 @@ function safeParseValue(value: string | null): StoredValue | null {
   try {
     const parsed = JSON.parse(value) as Partial<StoredValue>;
 
-    if (!parsed || typeof parsed !== 'object' || typeof parsed.name !== 'string') {
-      return null;
-    }
-
-    const library = parsed.library === 'remix' ? 'remix' : 'lucide';
-    const strokeWidth =
-      library === 'lucide' && typeof parsed.strokeWidth === 'number'
-        ? parsed.strokeWidth
-        : DEFAULT_STROKE_WIDTH;
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.name !== 'string') return null;
 
     return {
-      library,
+      library: parsed.library === 'remix' ? 'remix' : 'lucide',
       name: parsed.name,
-      strokeWidth,
+      strokeWidth:
+        parsed.library !== 'remix' && typeof parsed.strokeWidth === 'number'
+          ? parsed.strokeWidth
+          : DEFAULT_STROKE_WIDTH,
     };
   } catch {
-    if (lucideNames.has(value)) {
-      return { library: 'lucide', name: value, strokeWidth: DEFAULT_STROKE_WIDTH };
-    }
-
-    if (remixNames.has(value)) {
-      return { library: 'remix', name: value };
-    }
-
+    if (lucideNames.has(value)) return { library: 'lucide', name: value, strokeWidth: DEFAULT_STROKE_WIDTH };
+    if (remixNames.has(value)) return { library: 'remix', name: value };
     return null;
   }
+}
+
+function useIconsPerRow(contentRef: Ref<HTMLElement | undefined>, menuActive: Ref<boolean>) {
+  const iconSize = 24;
+  const gap = 8;
+  const iconsPerRow = ref(1);
+  let resizeObserver: ResizeObserver | null = null;
+
+  function calculateIconsPerRow() {
+    if (!contentRef.value) return;
+
+    const contentWidth = contentRef.value.clientWidth;
+    const availableWidth = contentWidth - 24;
+    const nextIconsPerRow = Math.floor(availableWidth / (iconSize + gap));
+    iconsPerRow.value = Math.max(1, nextIconsPerRow);
+  }
+
+  function setupResizeObserver() {
+    if (!contentRef.value) return;
+
+    resizeObserver?.disconnect();
+    resizeObserver = new ResizeObserver(() => calculateIconsPerRow());
+    resizeObserver.observe(contentRef.value);
+  }
+
+  watch(menuActive, async (isActive) => {
+    if (isActive) {
+      await nextTick();
+      setupResizeObserver();
+      calculateIconsPerRow();
+    } else {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+    }
+  });
+
+  onUnmounted(() => resizeObserver?.disconnect());
+
+  return { iconsPerRow, iconSize, gap };
 }
 
 export default defineComponent({
@@ -315,12 +348,14 @@ export default defineComponent({
   },
   emits: ['input'],
   setup(props, { emit }) {
-    const root = ref<HTMLElement | null>(null);
-    const isOpen = ref(false);
-    const query = ref('');
+    const searchQuery = ref('');
+    const menuActive = ref(false);
     const remixVariant = ref<RemixVariant>('all');
     const strokeWidthDraft = ref(DEFAULT_STROKE_WIDTH);
     const strokeWidthInput = ref(String(DEFAULT_STROKE_WIDTH));
+    const contentRef = ref<HTMLElement>();
+
+    const { iconsPerRow, iconSize, gap } = useIconsPerRow(contentRef, menuActive);
 
     const parsedValue = computed(() => safeParseValue(props.value));
     const selectedLibrary = computed<IconLibrary>(() => parsedValue.value?.library ?? 'lucide');
@@ -329,42 +364,43 @@ export default defineComponent({
       const parsed = parsedValue.value;
       return parsed ? `${parsed.library}:${parsed.name}` : '';
     });
-    const selectedIcon = computed(() => iconMap.get(selectedIconId.value) ?? null);
+    const selectedIcon = computed(() => (selectedIconId.value ? iconMap.get(selectedIconId.value) ?? null : null));
+
+    const availableIcons = computed(() => {
+      if (selectedLibrary.value === 'lucide') return lucideList;
+
+      if (remixVariant.value === 'line') return remixList.filter((icon) => icon.group === 'Line');
+      if (remixVariant.value === 'fill') return remixList.filter((icon) => icon.group === 'Fill');
+      return remixList;
+    });
 
     const filteredIcons = computed(() => {
-      const normalizedQuery = query.value.trim().toLowerCase();
-      const source = selectedLibrary.value === 'lucide' ? lucideList : remixList;
+      if (!searchQuery.value) return availableIcons.value;
+      const query = searchQuery.value.toLowerCase();
 
-      const remixedSource =
-        selectedLibrary.value !== 'remix' || remixVariant.value === 'all'
-          ? source
-          : source.filter((icon) =>
-              remixVariant.value === 'line' ? icon.name.endsWith('Line') : icon.name.endsWith('Fill'),
-            );
-
-      if (!normalizedQuery) return remixedSource;
-
-      return remixedSource.filter((icon) => {
-        return (
-          icon.label.toLowerCase().includes(normalizedQuery) ||
-          icon.name.toLowerCase().includes(normalizedQuery)
-        );
+      return availableIcons.value.filter((icon) => {
+        return icon.label.toLowerCase().includes(query) || icon.name.toLowerCase().includes(query);
       });
     });
 
     const groupedIcons = computed(() => {
-      const groups = new Map<string, IconOption[]>();
-
-      for (const icon of filteredIcons.value) {
-        const key = icon.section;
-        const existing = groups.get(key) ?? [];
-        existing.push(icon);
-        groups.set(key, existing);
+      if (selectedLibrary.value === 'lucide') {
+        return [{ name: 'Lucide', icons: filteredIcons.value }];
       }
 
-      return Array.from(groups.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([title, icons]) => ({ title, icons }));
+      if (remixVariant.value === 'all') {
+        return [
+          { name: 'Line', icons: filteredIcons.value.filter((icon) => icon.group === 'Line') },
+          { name: 'Fill', icons: filteredIcons.value.filter((icon) => icon.group === 'Fill') },
+        ].filter((group) => group.icons.length > 0);
+      }
+
+      return [
+        {
+          name: remixVariant.value === 'line' ? 'Line' : 'Fill',
+          icons: filteredIcons.value,
+        },
+      ];
     });
 
     watch(
@@ -376,117 +412,92 @@ export default defineComponent({
       { immediate: true },
     );
 
-    function emitValue(next: StoredValue | null): void {
+    function emitValue(next: StoredValue | null) {
       emit('input', next ? JSON.stringify(next) : null);
     }
 
-    function onLibraryChange(event: Event): void {
-      const target = event.target as HTMLSelectElement;
-      const nextLibrary = target.value === 'remix' ? 'remix' : 'lucide';
+    function onLibraryChange(event: Event) {
+      const nextLibrary = (event.target as HTMLSelectElement).value === 'remix' ? 'remix' : 'lucide';
       const source = nextLibrary === 'lucide' ? lucideList : remixList;
-      const firstIcon = source[0];
-
-      query.value = '';
-      if (nextLibrary !== 'remix') remixVariant.value = 'all';
+      const first = source[0];
+      searchQuery.value = '';
+      remixVariant.value = 'all';
 
       emitValue({
         library: nextLibrary,
-        name: firstIcon?.name ?? '',
+        name: first?.name ?? '',
         strokeWidth: nextLibrary === 'lucide' ? currentStrokeWidth.value : undefined,
       });
     }
 
-    function updateStrokeWidth(nextValue: number): void {
-      const parsed = parsedValue.value;
+    function onRemixVariantChange(event: Event) {
+      const value = (event.target as HTMLSelectElement).value;
+      remixVariant.value = value === 'line' || value === 'fill' ? value : 'all';
+      searchQuery.value = '';
+    }
 
-      if (!parsed || parsed.library !== 'lucide' || Number.isNaN(nextValue)) return;
-
-      const clampedValue = Math.min(4, Math.max(0.5, nextValue));
+    function onStrokeWidthChange(value: number | string) {
+      const nextValue = typeof value === 'string' ? Number.parseFloat(value) : value;
+      if (!parsedValue.value || parsedValue.value.library !== 'lucide' || Number.isNaN(nextValue)) return;
 
       emitValue({
-        ...parsed,
-        strokeWidth: clampedValue,
+        ...parsedValue.value,
+        strokeWidth: Math.max(0.5, Math.min(4, nextValue)),
       });
     }
 
-    function onStrokeWidthChange(value: number | string): void {
-      const nextValue = typeof value === 'string' ? Number.parseFloat(value) : value;
-      updateStrokeWidth(nextValue);
+    function onStrokeWidthInputChange(value: number | string) {
+      onStrokeWidthChange(value);
     }
 
-    function onStrokeWidthInputChange(value: string | number): void {
-      const nextValue = typeof value === 'number' ? value : Number.parseFloat(value);
-      if (!Number.isNaN(nextValue)) updateStrokeWidth(nextValue);
-    }
-
-    function onQueryChange(value: string | number): void {
-      query.value = String(value ?? '');
-    }
-
-    function onRemixVariantChange(event: Event): void {
-      const target = event.target as HTMLSelectElement;
-      remixVariant.value = target.value === 'line' || target.value === 'fill' ? target.value : 'all';
-    }
-
-    function selectIcon(id: string): void {
-      const icon = iconMap.get(id);
-      if (!icon) return;
-
+    function selectIcon(icon: IconOption) {
+      searchQuery.value = '';
       emitValue({
         library: icon.library,
         name: icon.name,
         strokeWidth: icon.library === 'lucide' ? currentStrokeWidth.value : undefined,
       });
-
-      isOpen.value = false;
     }
 
-    function toggleOpen(): void {
-      isOpen.value = !isOpen.value;
-    }
-
-    function clearValue(): void {
+    function clearValue() {
+      searchQuery.value = '';
       emit('input', null);
     }
 
-    function handleClickOutside(event: MouseEvent): void {
-      if (!root.value) return;
-      if (event.target instanceof Node && !root.value.contains(event.target)) {
-        isOpen.value = false;
-      }
+    function onClickInput(event: InputEvent, toggle: () => void) {
+      if ((event.target as HTMLInputElement).tagName === 'INPUT') toggle();
     }
 
-    onMounted(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    });
-
-    onBeforeUnmount(() => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    });
+    function onKeydownInput(event: KeyboardEvent, activate: () => void) {
+      const systemKeys = event.metaKey || event.altKey || event.ctrlKey || event.shiftKey || event.key === 'Tab';
+      if (!event.repeat && !systemKeys && (event.target as HTMLInputElement).tagName === 'INPUT') activate();
+    }
 
     return {
       IconRenderer,
-      currentStrokeWidth,
-      filteredIcons,
-      groupedIcons,
-      isOpen,
+      MIN_ITEM_SIZE,
       clearValue,
+      contentRef,
+      currentStrokeWidth,
+      gap,
+      groupedIcons,
+      iconSize,
+      iconsPerRow,
+      menuActive,
+      onClickInput,
+      onKeydownInput,
       onLibraryChange,
-      onQueryChange,
       onRemixVariantChange,
       onStrokeWidthChange,
       onStrokeWidthInputChange,
-      query,
       remixVariant,
-      root,
+      searchQuery,
       selectIcon,
       selectedIcon,
       selectedIconId,
       selectedLibrary,
       strokeWidthDraft,
       strokeWidthInput,
-      toggleOpen,
-      value: props.value,
     };
   },
 });
@@ -496,189 +507,121 @@ export default defineComponent({
 .dreamui-icon-field {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1rem;
 }
 
 .dreamui-icon-field__toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
 }
 
 .dreamui-icon-field__control {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.4375rem;
 }
 
 .dreamui-icon-field__label {
   color: var(--theme--foreground-subdued);
-  font-size: 12px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .dreamui-icon-field__native-select {
-  min-height: 44px;
+  min-height: 2.75rem;
   border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
   border-radius: var(--theme--border-radius);
   background: var(--theme--form--field--input--background-subdued);
   color: var(--theme--foreground);
-  padding: 0 12px;
-}
-
-.dreamui-icon-field__control--stroke {
-  min-width: 0;
+  padding: 0 0.875rem;
+  font: inherit;
 }
 
 .dreamui-icon-field__stroke-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  gap: 1rem;
   align-items: center;
 }
 
-.dreamui-icon-field__dropdown {
-  position: relative;
+.dreamui-icon-field__stroke-controls :deep(.v-slider) {
+  inline-size: 100%;
+  margin-block-start: 0.6875rem;
 }
 
-.dreamui-icon-field__trigger {
-  width: 100%;
-  min-height: 102px;
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  border-radius: 10px;
-  background: var(--theme--form--field--input--background-subdued);
-  color: var(--theme--foreground);
+.item-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 24px;
-  cursor: pointer;
-  font: inherit;
+  justify-content: flex-end;
+  gap: 0.25rem;
 }
 
-.dreamui-icon-field__trigger--open {
-  border-color: var(--theme--primary);
+.selected-icon {
+  color: var(--theme--primary);
 }
 
-.dreamui-icon-field__trigger-value {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-  font-size: 20px;
-  font-weight: 600;
+.dreamui-icon-field :deep(.v-input.has-value) {
+  --v-input-placeholder-color: var(--theme--primary);
 }
 
-.dreamui-icon-field__trigger-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--theme--foreground);
+.dreamui-icon-field :deep(.v-input.has-value:focus-within) {
+  --v-input-placeholder-color: var(--theme--form--field--input--foreground-subdued);
 }
 
-.dreamui-icon-field__trigger-text--active {
-  color: var(--theme--warning);
+.select-icon-popover {
+  --v-icon-color-hover: var(--theme--form--field--input--foreground);
+
+  padding: 0.4375rem;
 }
 
-.dreamui-icon-field__clear-button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--theme--foreground-subdued);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.dreamui-icon-field__menu {
-  position: absolute;
-  inset-inline: 0;
-  top: calc(100% + 8px);
-  z-index: 20;
-  border-radius: var(--theme--popover--menu--border-radius);
-  background: var(--theme--popover--menu--background);
-  box-shadow: var(--theme--popover--menu--box-shadow);
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  overflow: hidden;
-}
-
-.dreamui-icon-field__icons {
-  max-height: 420px;
-  overflow: auto;
-  padding: 16px 20px 12px;
-}
-
-.dreamui-icon-field__section + .dreamui-icon-field__section {
-  margin-top: 14px;
-}
-
-.dreamui-icon-field__section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-  color: var(--theme--foreground-subdued);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.dreamui-icon-field__section-header::after {
-  content: '';
-  height: 1px;
-  flex: 1;
-  background: var(--theme--form--field--input--border-color);
-}
-
-.dreamui-icon-field__section-grid {
+.icon-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(32px, 32px));
-  gap: 12px;
+  gap: var(--gap, 0.5rem);
+  grid-template-columns: repeat(var(--icons-per-row, 1), var(--icon-size, 1.5rem));
   justify-content: start;
+  color: var(--theme--form--field--input--foreground-subdued);
+  padding: 0.25rem;
 }
 
-.dreamui-icon-field__icon-button {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--theme--foreground-subdued);
+.icon-row--header {
+  display: block;
+  padding-block-start: 0.5rem;
+}
+
+.dreamui-icon-button {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--theme--form--field--input--foreground-subdued);
   cursor: pointer;
 }
 
-.dreamui-icon-field__icon-button:hover,
-.dreamui-icon-field__icon-button--active {
-  color: var(--theme--foreground);
-  background: var(--theme--background-normal);
+.dreamui-icon-button:hover,
+.dreamui-icon-button.active {
+  color: var(--theme--primary);
 }
 
-.dreamui-icon-field__search {
-  padding: 12px 20px 16px;
-  border-top: 1px solid var(--theme--form--field--input--border-color);
-}
-
-.dreamui-icon-field__empty {
-  grid-column: 1 / -1;
-  color: var(--theme--foreground-subdued);
-  padding: 8px 0;
-}
-
-.dreamui-icon-field__value {
-  font-size: 12px;
+.dreamui-empty {
+  padding: 0.5rem;
   color: var(--theme--foreground-subdued);
 }
 
-@media (max-width: 720px) {
-  .dreamui-icon-field__toolbar,
+.open-indicator {
+  transform: scaleY(1);
+  transition: transform var(--fast) var(--transition);
+}
+
+.open-indicator.open {
+  transform: scaleY(-1);
+}
+
+@media (max-width: 50rem) {
   .dreamui-icon-field__stroke-controls {
     grid-template-columns: 1fr;
   }

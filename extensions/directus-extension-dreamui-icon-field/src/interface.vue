@@ -3,7 +3,43 @@
     <div class="dreamui-icon-field__toolbar">
       <label class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Library</span>
-        <VSelect v-model="libraryModel" :items="libraryItems" item-text="text" item-value="value" />
+        <VMenu v-model="libraryMenuActive" attached>
+          <template #activator="{ active, toggle }">
+            <VInput
+              :model-value="selectedLibraryLabel"
+              readonly
+              @click="toggle"
+            >
+              <template #append>
+                <VIcon
+                  clickable
+                  name="expand_more"
+                  class="open-indicator"
+                  :class="{ open: active }"
+                  @click="toggle"
+                />
+              </template>
+            </VInput>
+          </template>
+
+          <div class="dreamui-select-popover">
+            <button
+              v-for="item in libraryItems"
+              :key="item.value"
+              type="button"
+              class="dreamui-select-option"
+              :class="{ active: item.value === selectedLibrary }"
+              @click="
+                () => {
+                  libraryModel = item.value;
+                  libraryMenuActive = false;
+                }
+              "
+            >
+              {{ item.text }}
+            </button>
+          </div>
+        </VMenu>
       </label>
 
       <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control">
@@ -31,7 +67,43 @@
 
       <label v-if="selectedLibrary === 'remix'" class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Variant</span>
-        <VSelect v-model="remixVariantModel" :items="remixVariantItems" item-text="text" item-value="value" />
+        <VMenu v-model="variantMenuActive" attached>
+          <template #activator="{ active, toggle }">
+            <VInput
+              :model-value="selectedRemixVariantLabel"
+              readonly
+              @click="toggle"
+            >
+              <template #append>
+                <VIcon
+                  clickable
+                  name="expand_more"
+                  class="open-indicator"
+                  :class="{ open: active }"
+                  @click="toggle"
+                />
+              </template>
+            </VInput>
+          </template>
+
+          <div class="dreamui-select-popover">
+            <button
+              v-for="item in remixVariantItems"
+              :key="item.value"
+              type="button"
+              class="dreamui-select-option"
+              :class="{ active: item.value === remixVariant }"
+              @click="
+                () => {
+                  remixVariantModel = item.value;
+                  variantMenuActive = false;
+                }
+              "
+            >
+              {{ item.text }}
+            </button>
+          </div>
+        </VMenu>
       </label>
     </div>
 
@@ -352,6 +424,8 @@ export default defineComponent({
   setup(props, { emit }) {
     const searchQuery = ref('');
     const menuActive = ref(false);
+    const libraryMenuActive = ref(false);
+    const variantMenuActive = ref(false);
     const remixVariant = ref<RemixVariant>('all');
     const strokeWidthDraft = ref(DEFAULT_STROKE_WIDTH);
     const strokeWidthInput = ref(String(DEFAULT_STROKE_WIDTH));
@@ -371,9 +445,15 @@ export default defineComponent({
       get: () => selectedLibrary.value,
       set: (value) => setLibrary(value),
     });
+    const selectedLibraryLabel = computed(() => {
+      return libraryItems.find((item) => item.value === selectedLibrary.value)?.text ?? 'Lucide';
+    });
     const remixVariantModel = computed<RemixVariant>({
       get: () => remixVariant.value,
       set: (value) => setRemixVariant(value),
+    });
+    const selectedRemixVariantLabel = computed(() => {
+      return remixVariantItems.find((item) => item.value === remixVariant.value)?.text ?? 'All';
     });
 
     const availableIcons = computed(() => {
@@ -493,6 +573,7 @@ export default defineComponent({
       iconSize,
       iconsPerRow,
       libraryItems,
+      libraryMenuActive,
       libraryModel,
       menuActive,
       onClickInput,
@@ -502,6 +583,8 @@ export default defineComponent({
       remixVariant,
       remixVariantItems,
       remixVariantModel,
+      selectedLibraryLabel,
+      selectedRemixVariantLabel,
       searchQuery,
       selectIcon,
       selectedIcon,
@@ -509,6 +592,7 @@ export default defineComponent({
       selectedLibrary,
       strokeWidthDraft,
       strokeWidthInput,
+      variantMenuActive,
     };
   },
 });
@@ -549,6 +633,31 @@ export default defineComponent({
 .dreamui-icon-field__stroke-controls :deep(.v-slider) {
   inline-size: 100%;
   margin-block-start: 0.6875rem;
+}
+
+.dreamui-select-popover {
+  padding: 0.375rem;
+  min-width: 12rem;
+}
+
+.dreamui-select-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: var(--theme--border-radius);
+  background: transparent;
+  color: var(--theme--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dreamui-select-option:hover,
+.dreamui-select-option.active {
+  background: var(--theme--background-highlight);
 }
 
 .item-actions {

@@ -62,14 +62,13 @@
             </span>
           </span>
 
-          <button
+          <span
             v-if="selectedIcon"
-            type="button"
             class="dreamui-icon-field__clear-button"
             @click.stop="clearValue"
           >
             <VIcon name="close" />
-          </button>
+          </span>
           <VIcon v-else :name="isOpen ? 'expand_less' : 'expand_more'" small />
         </button>
 

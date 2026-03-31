@@ -3,10 +3,7 @@
     <div class="dreamui-icon-field__toolbar">
       <label class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Library</span>
-        <select :value="selectedLibrary" class="dreamui-icon-field__native-select" @change="onLibraryChange">
-          <option value="lucide">Lucide</option>
-          <option value="remix">Remix Icon</option>
-        </select>
+        <VSelect v-model="libraryModel" :items="libraryItems" item-text="text" item-value="value" />
       </label>
 
       <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control">
@@ -34,11 +31,7 @@
 
       <label v-if="selectedLibrary === 'remix'" class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Variant</span>
-        <select :value="remixVariant" class="dreamui-icon-field__native-select" @change="onRemixVariantChange">
-          <option value="all">All</option>
-          <option value="line">Line</option>
-          <option value="fill">Fill</option>
-        </select>
+        <VSelect v-model="remixVariantModel" :items="remixVariantItems" item-text="text" item-value="value" />
       </label>
     </div>
 
@@ -158,6 +151,15 @@ type IconOption = {
 
 const DEFAULT_STROKE_WIDTH = 2;
 const MIN_ITEM_SIZE = 32;
+const libraryItems = [
+  { text: 'Lucide', value: 'lucide' },
+  { text: 'Remix Icon', value: 'remix' },
+] as const;
+const remixVariantItems = [
+  { text: 'All', value: 'all' },
+  { text: 'Line', value: 'line' },
+  { text: 'Fill', value: 'fill' },
+] as const;
 
 const LucideRenderer = defineComponent({
   name: 'LucideRenderer',
@@ -365,6 +367,14 @@ export default defineComponent({
       return parsed ? `${parsed.library}:${parsed.name}` : '';
     });
     const selectedIcon = computed(() => (selectedIconId.value ? iconMap.get(selectedIconId.value) ?? null : null));
+    const libraryModel = computed<IconLibrary>({
+      get: () => selectedLibrary.value,
+      set: (value) => setLibrary(value),
+    });
+    const remixVariantModel = computed<RemixVariant>({
+      get: () => remixVariant.value,
+      set: (value) => setRemixVariant(value),
+    });
 
     const availableIcons = computed(() => {
       if (selectedLibrary.value === 'lucide') return lucideList;
@@ -416,8 +426,8 @@ export default defineComponent({
       emit('input', next ? JSON.stringify(next) : null);
     }
 
-    function onLibraryChange(event: Event) {
-      const nextLibrary = (event.target as HTMLSelectElement).value === 'remix' ? 'remix' : 'lucide';
+    function setLibrary(value: string | number | null) {
+      const nextLibrary = value === 'remix' ? 'remix' : 'lucide';
       const source = nextLibrary === 'lucide' ? lucideList : remixList;
       const first = source[0];
       searchQuery.value = '';
@@ -430,8 +440,7 @@ export default defineComponent({
       });
     }
 
-    function onRemixVariantChange(event: Event) {
-      const value = (event.target as HTMLSelectElement).value;
+    function setRemixVariant(value: string | number | null) {
       remixVariant.value = value === 'line' || value === 'fill' ? value : 'all';
       searchQuery.value = '';
     }
@@ -483,14 +492,16 @@ export default defineComponent({
       groupedIcons,
       iconSize,
       iconsPerRow,
+      libraryItems,
+      libraryModel,
       menuActive,
       onClickInput,
       onKeydownInput,
-      onLibraryChange,
-      onRemixVariantChange,
       onStrokeWidthChange,
       onStrokeWidthInputChange,
       remixVariant,
+      remixVariantItems,
+      remixVariantModel,
       searchQuery,
       selectIcon,
       selectedIcon,
@@ -526,16 +537,6 @@ export default defineComponent({
   color: var(--theme--foreground-subdued);
   font-size: 0.875rem;
   font-weight: 600;
-}
-
-.dreamui-icon-field__native-select {
-  min-height: 2.75rem;
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  border-radius: var(--theme--border-radius);
-  background: var(--theme--form--field--input--background-subdued);
-  color: var(--theme--foreground);
-  padding: 0 0.875rem;
-  font: inherit;
 }
 
 .dreamui-icon-field__stroke-controls {

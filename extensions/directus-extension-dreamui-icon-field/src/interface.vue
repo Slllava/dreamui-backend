@@ -32,6 +32,15 @@
           />
         </div>
       </label>
+
+      <label v-if="selectedLibrary === 'remix'" class="dreamui-icon-field__control">
+        <span class="dreamui-icon-field__label">Variant</span>
+        <select :value="remixVariant" class="dreamui-icon-field__native-select" @change="onRemixVariantChange">
+          <option value="all">All</option>
+          <option value="line">Line</option>
+          <option value="fill">Fill</option>
+        </select>
+      </label>
     </div>
 
     <div class="dreamui-icon-field__control">
@@ -48,27 +57,51 @@
             <span v-if="selectedIcon" class="dreamui-icon-field__trigger-icon">
               <component :is="IconRenderer" :icon="selectedIcon" :size="18" :stroke-width="currentStrokeWidth" />
             </span>
-            <span>{{ selectedIcon ? selectedIcon.label : 'Search for icon...' }}</span>
+            <span :class="{ 'dreamui-icon-field__trigger-text--active': selectedIcon }">
+              {{ selectedIcon ? selectedIcon.label : 'Search for icon...' }}
+            </span>
           </span>
 
-          <VIcon :name="isOpen ? 'expand_less' : 'expand_more'" small />
+          <button
+            v-if="selectedIcon"
+            type="button"
+            class="dreamui-icon-field__clear-button"
+            @click.stop="clearValue"
+          >
+            <VIcon name="close" />
+          </button>
+          <VIcon v-else :name="isOpen ? 'expand_less' : 'expand_more'" small />
         </button>
 
         <div v-if="isOpen" class="dreamui-icon-field__menu">
           <div class="dreamui-icon-field__icons">
-            <button
-              v-for="icon in filteredIcons"
-              :key="icon.id"
-              type="button"
-              class="dreamui-icon-field__icon-button"
-              :class="{ 'dreamui-icon-field__icon-button--active': icon.id === selectedIconId }"
-              :title="icon.label"
-              @click="selectIcon(icon.id)"
-            >
-              <component :is="IconRenderer" :icon="icon" :size="18" :stroke-width="currentStrokeWidth" />
-            </button>
+            <template v-if="groupedIcons.length > 0">
+              <section
+                v-for="group in groupedIcons"
+                :key="group.title"
+                class="dreamui-icon-field__section"
+              >
+                <div class="dreamui-icon-field__section-header">
+                  <span>{{ group.title }}</span>
+                </div>
 
-            <div v-if="filteredIcons.length === 0" class="dreamui-icon-field__empty">
+                <div class="dreamui-icon-field__section-grid">
+                  <button
+                    v-for="icon in group.icons"
+                    :key="icon.id"
+                    type="button"
+                    class="dreamui-icon-field__icon-button"
+                    :class="{ 'dreamui-icon-field__icon-button--active': icon.id === selectedIconId }"
+                    :title="icon.label"
+                    @click="selectIcon(icon.id)"
+                  >
+                    <component :is="IconRenderer" :icon="icon" :size="18" :stroke-width="currentStrokeWidth" />
+                  </button>
+                </div>
+              </section>
+            </template>
+
+            <div v-else class="dreamui-icon-field__empty">
               No icons found
             </div>
           </div>
@@ -95,6 +128,7 @@ import * as lucideIcons from 'lucide';
 import * as remixIcons from '@remixicon/vue';
 
 type IconLibrary = 'lucide' | 'remix';
+type RemixVariant = 'all' | 'line' | 'fill';
 
 type StoredValue = {
   library: IconLibrary;
@@ -109,6 +143,7 @@ type IconOption = {
   label: string;
   library: IconLibrary;
   name: string;
+  section: string;
   component?: Component;
   iconNode?: LucideNode;
 };
@@ -196,6 +231,11 @@ function toRemixLabel(name: string): string {
   return name.replace(/^Ri/, '').replace(/Icon$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim();
 }
 
+function getSectionFromLabel(label: string): string {
+  const [firstWord] = label.split(' ');
+  return firstWord ? firstWord[0]?.toUpperCase() ?? 'Other' : 'Other';
+}
+
 const lucideList = Object.entries(lucideIcons)
   .filter(([name, iconNode]) => {
     return (
@@ -209,6 +249,7 @@ const lucideList = Object.entries(lucideIcons)
     label: toLucideLabel(name),
     library: 'lucide' as const,
     name,
+    section: getSectionFromLabel(toLucideLabel(name)),
     iconNode: iconNode as LucideNode,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
@@ -220,6 +261,7 @@ const remixList = Object.entries(remixIcons)
     label: toRemixLabel(name),
     library: 'remix' as const,
     name,
+    section: getSectionFromLabel(toRemixLabel(name)),
     component: component as Component,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
@@ -277,6 +319,7 @@ export default defineComponent({
     const root = ref<HTMLElement | null>(null);
     const isOpen = ref(false);
     const query = ref('');
+    const remixVariant = ref<RemixVariant>('all');
     const strokeWidthDraft = ref(DEFAULT_STROKE_WIDTH);
     const strokeWidthInput = ref(String(DEFAULT_STROKE_WIDTH));
 
@@ -293,14 +336,36 @@ export default defineComponent({
       const normalizedQuery = query.value.trim().toLowerCase();
       const source = selectedLibrary.value === 'lucide' ? lucideList : remixList;
 
-      if (!normalizedQuery) return source;
+      const remixedSource =
+        selectedLibrary.value !== 'remix' || remixVariant.value === 'all'
+          ? source
+          : source.filter((icon) =>
+              remixVariant.value === 'line' ? icon.name.endsWith('Line') : icon.name.endsWith('Fill'),
+            );
 
-      return source.filter((icon) => {
+      if (!normalizedQuery) return remixedSource;
+
+      return remixedSource.filter((icon) => {
         return (
           icon.label.toLowerCase().includes(normalizedQuery) ||
           icon.name.toLowerCase().includes(normalizedQuery)
         );
       });
+    });
+
+    const groupedIcons = computed(() => {
+      const groups = new Map<string, IconOption[]>();
+
+      for (const icon of filteredIcons.value) {
+        const key = icon.section;
+        const existing = groups.get(key) ?? [];
+        existing.push(icon);
+        groups.set(key, existing);
+      }
+
+      return Array.from(groups.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([title, icons]) => ({ title, icons }));
     });
 
     watch(
@@ -323,6 +388,7 @@ export default defineComponent({
       const firstIcon = source[0];
 
       query.value = '';
+      if (nextLibrary !== 'remix') remixVariant.value = 'all';
 
       emitValue({
         library: nextLibrary,
@@ -358,6 +424,11 @@ export default defineComponent({
       query.value = String(value ?? '');
     }
 
+    function onRemixVariantChange(event: Event): void {
+      const target = event.target as HTMLSelectElement;
+      remixVariant.value = target.value === 'line' || target.value === 'fill' ? target.value : 'all';
+    }
+
     function selectIcon(id: string): void {
       const icon = iconMap.get(id);
       if (!icon) return;
@@ -373,6 +444,10 @@ export default defineComponent({
 
     function toggleOpen(): void {
       isOpen.value = !isOpen.value;
+    }
+
+    function clearValue(): void {
+      emit('input', null);
     }
 
     function handleClickOutside(event: MouseEvent): void {
@@ -394,12 +469,16 @@ export default defineComponent({
       IconRenderer,
       currentStrokeWidth,
       filteredIcons,
+      groupedIcons,
       isOpen,
+      clearValue,
       onLibraryChange,
       onQueryChange,
+      onRemixVariantChange,
       onStrokeWidthChange,
       onStrokeWidthInputChange,
       query,
+      remixVariant,
       root,
       selectIcon,
       selectedIcon,
@@ -423,7 +502,7 @@ export default defineComponent({
 
 .dreamui-icon-field__toolbar {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -465,16 +544,16 @@ export default defineComponent({
 
 .dreamui-icon-field__trigger {
   width: 100%;
-  min-height: 44px;
+  min-height: 102px;
   border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  border-radius: var(--theme--border-radius);
+  border-radius: 10px;
   background: var(--theme--form--field--input--background-subdued);
   color: var(--theme--foreground);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0 24px;
   cursor: pointer;
   font: inherit;
 }
@@ -486,17 +565,34 @@ export default defineComponent({
 .dreamui-icon-field__trigger-value {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   min-width: 0;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .dreamui-icon-field__trigger-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   color: var(--theme--foreground);
+}
+
+.dreamui-icon-field__trigger-text--active {
+  color: var(--theme--warning);
+}
+
+.dreamui-icon-field__clear-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme--foreground-subdued);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .dreamui-icon-field__menu {
@@ -514,7 +610,33 @@ export default defineComponent({
 .dreamui-icon-field__icons {
   max-height: 420px;
   overflow: auto;
-  padding: 16px;
+  padding: 16px 20px 12px;
+}
+
+.dreamui-icon-field__section + .dreamui-icon-field__section {
+  margin-top: 14px;
+}
+
+.dreamui-icon-field__section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--theme--foreground-subdued);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dreamui-icon-field__section-header::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--theme--form--field--input--border-color);
+}
+
+.dreamui-icon-field__section-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(32px, 32px));
   gap: 12px;
@@ -541,7 +663,7 @@ export default defineComponent({
 }
 
 .dreamui-icon-field__search {
-  padding: 12px;
+  padding: 12px 20px 16px;
   border-top: 1px solid var(--theme--form--field--input--border-color);
 }
 

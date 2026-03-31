@@ -36,8 +36,9 @@
 
     <div class="dreamui-icon-field__summary">
       <div class="dreamui-icon-field__preview" :class="{ 'dreamui-icon-field__preview--empty': !selectedIcon }">
-        <IconRenderer
+        <component
           v-if="selectedIcon"
+          :is="IconRenderer"
           :icon="selectedIcon"
           :size="26"
           :stroke-width="currentStrokeWidth"
@@ -69,7 +70,9 @@
         :class="{ 'dreamui-icon-field__tile--active': icon.id === selectedIconId }"
         @click="selectIcon(icon.id)"
       >
-        <IconRenderer :icon="icon" :size="22" :stroke-width="currentStrokeWidth" />
+        <div class="dreamui-icon-field__tile-icon">
+          <component :is="IconRenderer" :icon="icon" :size="20" :stroke-width="currentStrokeWidth" />
+        </div>
         <span>{{ icon.label }}</span>
       </button>
     </div>
@@ -264,6 +267,9 @@ function safeParseValue(value: string | null): StoredValue | null {
 }
 
 export default defineComponent({
+  components: {
+    IconRenderer,
+  },
   props: {
     value: {
       type: String,
@@ -381,7 +387,7 @@ export default defineComponent({
 .dreamui-icon-field {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .dreamui-icon-field__toolbar {
@@ -408,22 +414,35 @@ export default defineComponent({
 
 .dreamui-icon-field__input {
   width: 100%;
-  min-height: 40px;
-  border: 1px solid var(--theme--border-normal);
-  border-radius: 8px;
+  min-height: 44px;
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
+  border-radius: var(--theme--border-radius);
   padding: 0 12px;
-  background: var(--theme--background-page);
+  background: var(--theme--form--field--input--background-subdued);
   color: var(--theme--foreground);
+  font-family: var(--theme--fonts--sans--font-family);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--fast) var(--transition), background-color var(--fast) var(--transition);
+}
+
+.dreamui-icon-field__input:hover {
+  border-color: var(--theme--form--field--input--border-color-hover);
+}
+
+.dreamui-icon-field__input:focus {
+  border-color: var(--theme--form--field--input--border-color-focus);
+  background: var(--theme--background-input);
 }
 
 .dreamui-icon-field__summary {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--theme--border-normal);
-  border-radius: 12px;
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
+  border-radius: calc(var(--theme--border-radius) + 4px);
   padding: 12px;
-  background: var(--theme--background-subdued);
+  background: var(--theme--form--field--input--background-subdued);
 }
 
 .dreamui-icon-field__preview {
@@ -432,10 +451,11 @@ export default defineComponent({
   justify-content: center;
   width: 52px;
   height: 52px;
-  border-radius: 12px;
+  border-radius: var(--theme--border-radius);
   background: var(--theme--background-page);
   color: var(--theme--foreground);
   flex-shrink: 0;
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
 }
 
 .dreamui-icon-field__preview--empty {
@@ -462,19 +482,20 @@ export default defineComponent({
 }
 
 .dreamui-icon-field__clear {
-  border: 0;
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
   border-radius: 999px;
   padding: 8px 12px;
-  background: var(--theme--primary);
-  color: var(--theme--primary-alt);
+  background: var(--theme--background-page);
+  color: var(--theme--foreground);
   cursor: pointer;
+  font: inherit;
 }
 
 .dreamui-icon-field__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-  max-height: 420px;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+  max-height: 440px;
   overflow: auto;
   padding-right: 4px;
 }
@@ -484,21 +505,41 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 96px;
-  border: 1px solid var(--theme--border-normal);
-  border-radius: 12px;
-  background: var(--theme--background-page);
+  gap: 8px;
+  min-height: 88px;
+  border: var(--theme--border-width) solid transparent;
+  border-radius: calc(var(--theme--border-radius) + 2px);
+  background: transparent;
   color: var(--theme--foreground);
   cursor: pointer;
-  padding: 12px;
+  padding: 10px 8px;
   text-align: center;
   font-size: 12px;
+  transition: background-color var(--fast) var(--transition), border-color var(--fast) var(--transition), color var(--fast) var(--transition);
+}
+
+.dreamui-icon-field__tile:hover {
+  background: var(--theme--background-highlight);
+}
+
+.dreamui-icon-field__tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--theme--border-radius);
+  background: var(--theme--background-page);
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
 }
 
 .dreamui-icon-field__tile--active {
   border-color: var(--theme--primary);
-  box-shadow: 0 0 0 1px var(--theme--primary);
+  background: var(--theme--primary-background);
+}
+
+.dreamui-icon-field__tile--active .dreamui-icon-field__tile-icon {
+  border-color: var(--theme--primary);
 }
 
 @media (max-width: 720px) {

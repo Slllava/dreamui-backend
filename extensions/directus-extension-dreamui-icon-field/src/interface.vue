@@ -1,87 +1,96 @@
 <template>
-  <div class="dreamui-icon-field">
+  <div ref="root" class="dreamui-icon-field">
     <div class="dreamui-icon-field__toolbar">
       <label class="dreamui-icon-field__control">
         <span class="dreamui-icon-field__label">Library</span>
-        <select :value="selectedLibrary" class="dreamui-icon-field__input" @change="onLibraryChange">
+        <select :value="selectedLibrary" class="dreamui-icon-field__native-select" @change="onLibraryChange">
           <option value="lucide">Lucide</option>
           <option value="remix">Remix Icon</option>
         </select>
       </label>
 
-      <label class="dreamui-icon-field__control dreamui-icon-field__control--search">
-        <span class="dreamui-icon-field__label">Search</span>
-        <input
-          :value="query"
-          type="search"
-          class="dreamui-icon-field__input"
-          placeholder="Search icons"
-          @input="onQueryInput"
-        />
-      </label>
-
-      <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control">
+      <label v-if="selectedLibrary === 'lucide'" class="dreamui-icon-field__control dreamui-icon-field__control--stroke">
         <span class="dreamui-icon-field__label">Stroke width</span>
-        <input
-          :value="String(currentStrokeWidth)"
-          type="number"
-          min="0.5"
-          max="4"
-          step="0.25"
-          class="dreamui-icon-field__input"
-          @input="onStrokeWidthInput"
-        />
+
+        <div class="dreamui-icon-field__stroke-controls">
+          <VSlider
+            v-model="strokeWidthDraft"
+            :min="0.5"
+            :max="4"
+            :step="0.25"
+            @update:model-value="onStrokeWidthChange"
+          />
+
+          <VInput
+            v-model="strokeWidthInput"
+            class="dreamui-icon-field__stroke-input"
+            type="number"
+            min="0.5"
+            max="4"
+            step="0.25"
+            @update:model-value="onStrokeWidthInputChange"
+          />
+        </div>
       </label>
     </div>
 
-    <div class="dreamui-icon-field__summary">
-      <div class="dreamui-icon-field__preview" :class="{ 'dreamui-icon-field__preview--empty': !selectedIcon }">
-        <component
-          v-if="selectedIcon"
-          :is="IconRenderer"
-          :icon="selectedIcon"
-          :size="26"
-          :stroke-width="currentStrokeWidth"
-        />
-        <span v-else>No icon selected</span>
-      </div>
+    <div class="dreamui-icon-field__control">
+      <span class="dreamui-icon-field__label">Icons</span>
 
-      <div class="dreamui-icon-field__meta">
-        <strong>{{ selectedIconLabel }}</strong>
-        <code class="dreamui-icon-field__code">{{ serializedValue }}</code>
-      </div>
+      <div class="dreamui-icon-field__dropdown">
+        <button
+          type="button"
+          class="dreamui-icon-field__trigger"
+          :class="{ 'dreamui-icon-field__trigger--open': isOpen }"
+          @click="toggleOpen"
+        >
+          <span class="dreamui-icon-field__trigger-value">
+            <span v-if="selectedIcon" class="dreamui-icon-field__trigger-icon">
+              <component :is="IconRenderer" :icon="selectedIcon" :size="18" :stroke-width="currentStrokeWidth" />
+            </span>
+            <span>{{ selectedIcon ? selectedIcon.label : 'Search for icon...' }}</span>
+          </span>
 
-      <button
-        v-if="value"
-        type="button"
-        class="dreamui-icon-field__clear"
-        @click="clearValue"
-      >
-        Clear
-      </button>
-    </div>
+          <VIcon :name="isOpen ? 'expand_less' : 'expand_more'" small />
+        </button>
 
-    <div class="dreamui-icon-field__grid">
-      <button
-        v-for="icon in filteredIcons"
-        :key="icon.id"
-        type="button"
-        class="dreamui-icon-field__tile"
-        :class="{ 'dreamui-icon-field__tile--active': icon.id === selectedIconId }"
-        @click="selectIcon(icon.id)"
-      >
-        <div class="dreamui-icon-field__tile-icon">
-          <component :is="IconRenderer" :icon="icon" :size="20" :stroke-width="currentStrokeWidth" />
+        <div v-if="isOpen" class="dreamui-icon-field__menu">
+          <div class="dreamui-icon-field__icons">
+            <button
+              v-for="icon in filteredIcons"
+              :key="icon.id"
+              type="button"
+              class="dreamui-icon-field__icon-button"
+              :class="{ 'dreamui-icon-field__icon-button--active': icon.id === selectedIconId }"
+              :title="icon.label"
+              @click="selectIcon(icon.id)"
+            >
+              <component :is="IconRenderer" :icon="icon" :size="18" :stroke-width="currentStrokeWidth" />
+            </button>
+
+            <div v-if="filteredIcons.length === 0" class="dreamui-icon-field__empty">
+              No icons found
+            </div>
+          </div>
+
+          <div class="dreamui-icon-field__search">
+            <VInput
+              v-model="query"
+              placeholder="Search for icon..."
+              @update:model-value="onQueryChange"
+            />
+          </div>
         </div>
-        <span>{{ icon.label }}</span>
-      </button>
+      </div>
     </div>
+
+    <code v-if="value" class="dreamui-icon-field__value">{{ value }}</code>
   </div>
 </template>
 
 <script lang="ts">
 import type { Component, PropType } from 'vue';
-import { computed, defineComponent, h, ref } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as lucideIcons from 'lucide';
 import * as remixIcons from '@remixicon/vue';
 
@@ -93,13 +102,15 @@ type StoredValue = {
   strokeWidth?: number;
 };
 
+type LucideNode = [string, Record<string, string>][];
+
 type IconOption = {
   id: string;
   label: string;
   library: IconLibrary;
   name: string;
   component?: Component;
-  iconNode?: [string, Record<string, string>][];
+  iconNode?: LucideNode;
 };
 
 const DEFAULT_STROKE_WIDTH = 2;
@@ -108,7 +119,7 @@ const LucideRenderer = defineComponent({
   name: 'LucideRenderer',
   props: {
     iconNode: {
-      type: Array as PropType<[string, Record<string, string>][]> ,
+      type: Array as PropType<LucideNode>,
       required: true,
     },
     size: {
@@ -178,19 +189,11 @@ const IconRenderer = defineComponent({
 });
 
 function toLucideLabel(name: string): string {
-  return name
-    .replace(/Icon$/, '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/-/g, ' ')
-    .trim();
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim();
 }
 
 function toRemixLabel(name: string): string {
-  return name
-    .replace(/^Ri/, '')
-    .replace(/Icon$/, '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim();
+  return name.replace(/^Ri/, '').replace(/Icon$/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim();
 }
 
 const lucideList = Object.entries(lucideIcons)
@@ -206,7 +209,7 @@ const lucideList = Object.entries(lucideIcons)
     label: toLucideLabel(name),
     library: 'lucide' as const,
     name,
-    iconNode: iconNode as [string, Record<string, string>][],
+    iconNode: iconNode as LucideNode,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -248,18 +251,11 @@ function safeParseValue(value: string | null): StoredValue | null {
     };
   } catch {
     if (lucideNames.has(value)) {
-      return {
-        library: 'lucide',
-        name: value,
-        strokeWidth: DEFAULT_STROKE_WIDTH,
-      };
+      return { library: 'lucide', name: value, strokeWidth: DEFAULT_STROKE_WIDTH };
     }
 
     if (remixNames.has(value)) {
-      return {
-        library: 'remix',
-        name: value,
-      };
+      return { library: 'remix', name: value };
     }
 
     return null;
@@ -278,15 +274,20 @@ export default defineComponent({
   },
   emits: ['input'],
   setup(props, { emit }) {
-    const parsedValue = computed(() => safeParseValue(props.value));
+    const root = ref<HTMLElement | null>(null);
+    const isOpen = ref(false);
     const query = ref('');
+    const strokeWidthDraft = ref(DEFAULT_STROKE_WIDTH);
+    const strokeWidthInput = ref(String(DEFAULT_STROKE_WIDTH));
 
+    const parsedValue = computed(() => safeParseValue(props.value));
     const selectedLibrary = computed<IconLibrary>(() => parsedValue.value?.library ?? 'lucide');
     const currentStrokeWidth = computed(() => parsedValue.value?.strokeWidth ?? DEFAULT_STROKE_WIDTH);
     const selectedIconId = computed(() => {
       const parsed = parsedValue.value;
       return parsed ? `${parsed.library}:${parsed.name}` : '';
     });
+    const selectedIcon = computed(() => iconMap.get(selectedIconId.value) ?? null);
 
     const filteredIcons = computed(() => {
       const normalizedQuery = query.value.trim().toLowerCase();
@@ -302,16 +303,14 @@ export default defineComponent({
       });
     });
 
-    const selectedIcon = computed(() => iconMap.get(selectedIconId.value) ?? null);
-    const selectedIconLabel = computed(() => {
-      if (!selectedIcon.value) return 'No icon selected';
-      return `${selectedIcon.value.label} (${selectedLibrary.value})`;
-    });
-
-    const serializedValue = computed(() => {
-      if (!props.value) return 'null';
-      return props.value;
-    });
+    watch(
+      currentStrokeWidth,
+      (value) => {
+        strokeWidthDraft.value = value;
+        strokeWidthInput.value = String(value);
+      },
+      { immediate: true },
+    );
 
     function emitValue(next: StoredValue | null): void {
       emit('input', next ? JSON.stringify(next) : null);
@@ -323,6 +322,8 @@ export default defineComponent({
       const source = nextLibrary === 'lucide' ? lucideList : remixList;
       const firstIcon = source[0];
 
+      query.value = '';
+
       emitValue({
         library: nextLibrary,
         name: firstIcon?.name ?? '',
@@ -330,21 +331,31 @@ export default defineComponent({
       });
     }
 
-    function onQueryInput(event: Event): void {
-      query.value = (event.target as HTMLInputElement).value;
-    }
-
-    function onStrokeWidthInput(event: Event): void {
-      const target = event.target as HTMLInputElement;
-      const nextValue = Number.parseFloat(target.value);
+    function updateStrokeWidth(nextValue: number): void {
       const parsed = parsedValue.value;
 
       if (!parsed || parsed.library !== 'lucide' || Number.isNaN(nextValue)) return;
 
+      const clampedValue = Math.min(4, Math.max(0.5, nextValue));
+
       emitValue({
         ...parsed,
-        strokeWidth: nextValue,
+        strokeWidth: clampedValue,
       });
+    }
+
+    function onStrokeWidthChange(value: number | string): void {
+      const nextValue = typeof value === 'string' ? Number.parseFloat(value) : value;
+      updateStrokeWidth(nextValue);
+    }
+
+    function onStrokeWidthInputChange(value: string | number): void {
+      const nextValue = typeof value === 'number' ? value : Number.parseFloat(value);
+      if (!Number.isNaN(nextValue)) updateStrokeWidth(nextValue);
+    }
+
+    function onQueryChange(value: string | number): void {
+      query.value = String(value ?? '');
     }
 
     function selectIcon(id: string): void {
@@ -356,27 +367,47 @@ export default defineComponent({
         name: icon.name,
         strokeWidth: icon.library === 'lucide' ? currentStrokeWidth.value : undefined,
       });
+
+      isOpen.value = false;
     }
 
-    function clearValue(): void {
-      emit('input', null);
+    function toggleOpen(): void {
+      isOpen.value = !isOpen.value;
     }
+
+    function handleClickOutside(event: MouseEvent): void {
+      if (!root.value) return;
+      if (event.target instanceof Node && !root.value.contains(event.target)) {
+        isOpen.value = false;
+      }
+    }
+
+    onMounted(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    });
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    });
 
     return {
-      clearValue,
+      IconRenderer,
       currentStrokeWidth,
       filteredIcons,
-      IconRenderer,
+      isOpen,
       onLibraryChange,
-      onQueryInput,
-      onStrokeWidthInput,
+      onQueryChange,
+      onStrokeWidthChange,
+      onStrokeWidthInputChange,
       query,
+      root,
       selectIcon,
       selectedIcon,
       selectedIconId,
-      selectedIconLabel,
       selectedLibrary,
-      serializedValue,
+      strokeWidthDraft,
+      strokeWidthInput,
+      toggleOpen,
       value: props.value,
     };
   },
@@ -392,7 +423,7 @@ export default defineComponent({
 
 .dreamui-icon-field__toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -402,148 +433,132 @@ export default defineComponent({
   gap: 6px;
 }
 
-.dreamui-icon-field__control--search {
-  grid-column: span 1;
-}
-
 .dreamui-icon-field__label {
   color: var(--theme--foreground-subdued);
   font-size: 12px;
   font-weight: 600;
 }
 
-.dreamui-icon-field__input {
+.dreamui-icon-field__native-select {
+  min-height: 44px;
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
+  border-radius: var(--theme--border-radius);
+  background: var(--theme--form--field--input--background-subdued);
+  color: var(--theme--foreground);
+  padding: 0 12px;
+}
+
+.dreamui-icon-field__control--stroke {
+  min-width: 0;
+}
+
+.dreamui-icon-field__stroke-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 12px;
+  align-items: center;
+}
+
+.dreamui-icon-field__dropdown {
+  position: relative;
+}
+
+.dreamui-icon-field__trigger {
   width: 100%;
   min-height: 44px;
   border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
   border-radius: var(--theme--border-radius);
-  padding: 0 12px;
   background: var(--theme--form--field--input--background-subdued);
   color: var(--theme--foreground);
-  font-family: var(--theme--fonts--sans--font-family);
-  font-size: 14px;
-  outline: none;
-  transition: border-color var(--fast) var(--transition), background-color var(--fast) var(--transition);
-}
-
-.dreamui-icon-field__input:hover {
-  border-color: var(--theme--form--field--input--border-color-hover);
-}
-
-.dreamui-icon-field__input:focus {
-  border-color: var(--theme--form--field--input--border-color-focus);
-  background: var(--theme--background-input);
-}
-
-.dreamui-icon-field__summary {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  border-radius: calc(var(--theme--border-radius) + 4px);
-  padding: 12px;
-  background: var(--theme--form--field--input--background-subdued);
-}
-
-.dreamui-icon-field__preview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--theme--border-radius);
-  background: var(--theme--background-page);
-  color: var(--theme--foreground);
-  flex-shrink: 0;
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-}
-
-.dreamui-icon-field__preview--empty {
-  width: auto;
-  min-width: 52px;
   padding: 0 12px;
-  color: var(--theme--foreground-subdued);
-  font-size: 12px;
-}
-
-.dreamui-icon-field__meta {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.dreamui-icon-field__code {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.dreamui-icon-field__clear {
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: var(--theme--background-page);
-  color: var(--theme--foreground);
   cursor: pointer;
   font: inherit;
 }
 
-.dreamui-icon-field__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-  gap: 8px;
-  max-height: 440px;
-  overflow: auto;
-  padding-right: 4px;
+.dreamui-icon-field__trigger--open {
+  border-color: var(--theme--primary);
 }
 
-.dreamui-icon-field__tile {
+.dreamui-icon-field__trigger-value {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dreamui-icon-field__trigger-icon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 88px;
-  border: var(--theme--border-width) solid transparent;
-  border-radius: calc(var(--theme--border-radius) + 2px);
-  background: transparent;
+  width: 20px;
+  height: 20px;
   color: var(--theme--foreground);
-  cursor: pointer;
-  padding: 10px 8px;
-  text-align: center;
-  font-size: 12px;
-  transition: background-color var(--fast) var(--transition), border-color var(--fast) var(--transition), color var(--fast) var(--transition);
 }
 
-.dreamui-icon-field__tile:hover {
-  background: var(--theme--background-highlight);
+.dreamui-icon-field__menu {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  border-radius: var(--theme--popover--menu--border-radius);
+  background: var(--theme--popover--menu--background);
+  box-shadow: var(--theme--popover--menu--box-shadow);
+  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
+  overflow: hidden;
 }
 
-.dreamui-icon-field__tile-icon {
-  display: flex;
+.dreamui-icon-field__icons {
+  max-height: 420px;
+  overflow: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(32px, 32px));
+  gap: 12px;
+  justify-content: start;
+}
+
+.dreamui-icon-field__icon-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme--foreground-subdued);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--theme--border-radius);
-  background: var(--theme--background-page);
-  border: var(--theme--border-width) solid var(--theme--form--field--input--border-color);
+  cursor: pointer;
 }
 
-.dreamui-icon-field__tile--active {
-  border-color: var(--theme--primary);
-  background: var(--theme--primary-background);
+.dreamui-icon-field__icon-button:hover,
+.dreamui-icon-field__icon-button--active {
+  color: var(--theme--foreground);
+  background: var(--theme--background-normal);
 }
 
-.dreamui-icon-field__tile--active .dreamui-icon-field__tile-icon {
-  border-color: var(--theme--primary);
+.dreamui-icon-field__search {
+  padding: 12px;
+  border-top: 1px solid var(--theme--form--field--input--border-color);
+}
+
+.dreamui-icon-field__empty {
+  grid-column: 1 / -1;
+  color: var(--theme--foreground-subdued);
+  padding: 8px 0;
+}
+
+.dreamui-icon-field__value {
+  font-size: 12px;
+  color: var(--theme--foreground-subdued);
 }
 
 @media (max-width: 720px) {
-  .dreamui-icon-field__toolbar {
+  .dreamui-icon-field__toolbar,
+  .dreamui-icon-field__stroke-controls {
     grid-template-columns: 1fr;
   }
 }

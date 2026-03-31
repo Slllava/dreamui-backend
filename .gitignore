@@ -3,5 +3,16 @@ node_modules
 .DS_Store
 uploads
 database
-extensions
+!extensions/
+!extensions/directus-extension-dreamui-icon-field/
+!extensions/directus-extension-dreamui-icon-field/package.json
+!extensions/directus-extension-dreamui-icon-field/package-lock.json
+!extensions/directus-extension-dreamui-icon-field/README.md
+!extensions/directus-extension-dreamui-icon-field/src/
+!extensions/directus-extension-dreamui-icon-field/src/index.ts
+!extensions/directus-extension-dreamui-icon-field/src/interface.vue
+!extensions/directus-extension-dreamui-icon-field/src/shims.d.ts
+!extensions/directus-extension-dreamui-icon-field/dist/
+!extensions/directus-extension-dreamui-icon-field/dist/index.js
+extensions/directus-extension-dreamui-icon-field/node_modules
 directus-temp

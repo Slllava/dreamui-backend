@@ -1,20 +1,22 @@
 <template>
   <private-view title="Resend Emails">
-    <div class="dreamui-resend">
-      <div class="dreamui-resend__tabs" role="tablist" aria-label="Resend sections">
+    <template #navigation>
+      <div class="dreamui-resend__navigation">
         <button
           v-for="tab in tabs"
           :key="tab.value"
-          class="dreamui-resend__tab"
+          class="dreamui-resend__nav-item"
           :class="{ active: activeTab === tab.value }"
           type="button"
           @click="activeTab = tab.value"
         >
-          <v-icon :name="tab.icon" small />
+          <v-icon :name="tab.icon" />
           <span>{{ tab.label }}</span>
         </button>
       </div>
+    </template>
 
+    <div class="dreamui-resend">
       <section v-if="activeTab === 'emails'" class="dreamui-resend__panel">
         <div class="dreamui-resend__toolbar">
           <div class="dreamui-resend__toolbar-main">
@@ -523,37 +525,42 @@ onMounted(async () => {
 .dreamui-resend {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   padding: 24px;
 }
 
-.dreamui-resend__tabs {
-  display: inline-flex;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 4px;
-  border: 1px solid var(--theme--form--field--input--border-color);
-  border-radius: var(--theme--border-radius);
-  background: var(--theme--background-subdued);
+.dreamui-resend__navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
 }
 
-.dreamui-resend__tab {
-  display: inline-flex;
+.dreamui-resend__nav-item {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 14px;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
   border: 0;
-  border-radius: calc(var(--theme--border-radius) - 2px);
+  border-radius: var(--theme--border-radius);
   background: transparent;
   color: var(--theme--foreground-subdued);
   cursor: pointer;
   font: inherit;
+  text-align: left;
 }
 
-.dreamui-resend__tab.active {
-  background: var(--theme--background);
+.dreamui-resend__nav-item:hover {
+  background: var(--theme--background-normal);
   color: var(--theme--foreground);
+}
+
+.dreamui-resend__nav-item.active {
+  background: var(--theme--background-normal);
+  color: var(--theme--foreground);
+  font-weight: 600;
 }
 
 .dreamui-resend__panel {

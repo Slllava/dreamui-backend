@@ -125,81 +125,84 @@ async function proxyResend<T>(path: string, init?: RequestInit): Promise<{ ok: t
   };
 }
 
-export default defineEndpoint((router) => {
-  router.get('/status', (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
+export default defineEndpoint({
+  id: 'dreamui-resend',
+  handler: (router) => {
+    router.get('/status', (req, res) => {
+      if (!ensureAuthenticated(req, res)) return;
 
-    res.json({
-      configured: Boolean(getApiKey()),
-      baseUrl: getBaseUrl(),
-      defaultLimit: getDefaultLimit(),
-      docsUrl: 'https://resend.com/docs/api-reference/emails/list-emails',
-      env: {
-        apiKey: Boolean(process.env.RESEND_API_KEY),
-        baseUrl: Boolean(process.env.RESEND_BASE_URL),
-        defaultLimit: Boolean(process.env.RESEND_DEFAULT_LIMIT),
-      },
-    });
-  });
-
-  router.get('/emails', async (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
-    if (!ensureConfigured(res)) return;
-
-    const { after, before } = req.query;
-
-    if (after && before) {
-      res.status(400).json({
-        error: 'Invalid pagination',
-        message: 'Use either "after" or "before", not both.',
+      res.json({
+        configured: Boolean(getApiKey()),
+        baseUrl: getBaseUrl(),
+        defaultLimit: getDefaultLimit(),
+        docsUrl: 'https://resend.com/docs/api-reference/emails/list-emails',
+        env: {
+          apiKey: Boolean(process.env.RESEND_API_KEY),
+          baseUrl: Boolean(process.env.RESEND_BASE_URL),
+          defaultLimit: Boolean(process.env.RESEND_DEFAULT_LIMIT),
+        },
       });
-      return;
-    }
-
-    const searchParams = new URLSearchParams();
-    searchParams.set('limit', String(parseLimit(req.query.limit)));
-
-    if (typeof after === 'string' && after.length > 0) searchParams.set('after', after);
-    if (typeof before === 'string' && before.length > 0) searchParams.set('before', before);
-
-    const response = await proxyResend<ResendListResponse>(`/emails?${searchParams.toString()}`);
-
-    if (!response.ok) {
-      res.status(response.status).json(response.body);
-      return;
-    }
-
-    res.json({
-      ...response.data,
-      query: {
-        limit: parseLimit(req.query.limit),
-        after: typeof after === 'string' ? after : null,
-        before: typeof before === 'string' ? before : null,
-      },
     });
-  });
 
-  router.get('/emails/:id', async (req, res) => {
-    if (!ensureAuthenticated(req, res)) return;
-    if (!ensureConfigured(res)) return;
+    router.get('/emails', async (req, res) => {
+      if (!ensureAuthenticated(req, res)) return;
+      if (!ensureConfigured(res)) return;
 
-    const id = String(req.params.id || '').trim();
+      const { after, before } = req.query;
 
-    if (!id) {
-      res.status(400).json({
-        error: 'Missing email id',
-        message: 'A Resend email id is required.',
+      if (after && before) {
+        res.status(400).json({
+          error: 'Invalid pagination',
+          message: 'Use either "after" or "before", not both.',
+        });
+        return;
+      }
+
+      const searchParams = new URLSearchParams();
+      searchParams.set('limit', String(parseLimit(req.query.limit)));
+
+      if (typeof after === 'string' && after.length > 0) searchParams.set('after', after);
+      if (typeof before === 'string' && before.length > 0) searchParams.set('before', before);
+
+      const response = await proxyResend<ResendListResponse>(`/emails?${searchParams.toString()}`);
+
+      if (!response.ok) {
+        res.status(response.status).json(response.body);
+        return;
+      }
+
+      res.json({
+        ...response.data,
+        query: {
+          limit: parseLimit(req.query.limit),
+          after: typeof after === 'string' ? after : null,
+          before: typeof before === 'string' ? before : null,
+        },
       });
-      return;
-    }
+    });
 
-    const response = await proxyResend<ResendEmailDetail>(`/emails/${encodeURIComponent(id)}`);
+    router.get('/emails/:id', async (req, res) => {
+      if (!ensureAuthenticated(req, res)) return;
+      if (!ensureConfigured(res)) return;
 
-    if (!response.ok) {
-      res.status(response.status).json(response.body);
-      return;
-    }
+      const id = String(req.params.id || '').trim();
 
-    res.json(response.data);
-  });
+      if (!id) {
+        res.status(400).json({
+          error: 'Missing email id',
+          message: 'A Resend email id is required.',
+        });
+        return;
+      }
+
+      const response = await proxyResend<ResendEmailDetail>(`/emails/${encodeURIComponent(id)}`);
+
+      if (!response.ok) {
+        res.status(response.status).json(response.body);
+        return;
+      }
+
+      res.json(response.data);
+    });
+  },
 });

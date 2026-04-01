@@ -70,7 +70,7 @@
               </div>
             </v-menu>
 
-            <v-button secondary small :disabled="loading" @click="refreshEmails">
+            <v-button class="dreamui-resend__refresh" secondary :disabled="loading" @click="refreshEmails">
               <v-icon name="refresh" left />
               Refresh
             </v-button>
@@ -577,7 +577,7 @@ onMounted(async () => {
 }
 
 .dreamui-resend__limit {
-  width: 140px;
+  width: 176px;
 }
 
 .dreamui-resend__open-indicator {
@@ -589,12 +589,17 @@ onMounted(async () => {
 }
 
 .dreamui-resend__limit-popover {
-  min-width: 140px;
+  min-width: 176px;
   padding: 8px;
   border: 1px solid var(--theme--form--field--input--border-color);
   border-radius: var(--theme--border-radius);
   background: var(--theme--background);
   box-shadow: var(--theme--box-shadow);
+}
+
+.dreamui-resend__refresh {
+  min-height: var(--theme--form--field--input--block-size);
+  padding-block: 0;
 }
 
 .dreamui-resend__limit-option {

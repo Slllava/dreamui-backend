@@ -36,16 +36,39 @@
           </div>
 
           <div class="dreamui-resend__toolbar-actions">
-            <v-input
-              v-model="limitInput"
-              type="number"
-              min="1"
-              max="100"
-              small
-              class="dreamui-resend__limit"
-            >
-              <template #prepend>Limit</template>
-            </v-input>
+            <v-menu v-model="limitMenuActive" attached>
+              <template #activator="{ active, toggle }">
+                <v-input
+                  class="dreamui-resend__limit"
+                  :model-value="`Limit ${parsedLimit}`"
+                  readonly
+                  @click="toggle"
+                >
+                  <template #append>
+                    <v-icon
+                      clickable
+                      name="expand_more"
+                      class="dreamui-resend__open-indicator"
+                      :class="{ open: active }"
+                      @click="toggle"
+                    />
+                  </template>
+                </v-input>
+              </template>
+
+              <div class="dreamui-resend__limit-popover">
+                <button
+                  v-for="option in limitOptions"
+                  :key="option"
+                  type="button"
+                  class="dreamui-resend__limit-option"
+                  :class="{ active: option === parsedLimit }"
+                  @click="selectLimit(option)"
+                >
+                  {{ option }}
+                </button>
+              </div>
+            </v-menu>
 
             <v-button secondary :disabled="loading" @click="refreshEmails">
               <v-icon name="refresh" left />
@@ -337,6 +360,7 @@ const api = useApi();
 const activeTab = ref<TabValue>('emails');
 const searchQuery = ref('');
 const limitInput = ref('20');
+const limitMenuActive = ref(false);
 
 const status = ref<StatusResponse | null>(null);
 const statusLoading = ref(false);
@@ -353,6 +377,7 @@ const isDetailOpen = ref(false);
 const detailLoading = ref(false);
 const detailError = ref('');
 const selectedEmail = ref<ResendEmailDetail | null>(null);
+const limitOptions = [10, 20, 50, 100];
 
 const parsedLimit = computed(() => {
   const value = Number(limitInput.value);
@@ -467,6 +492,11 @@ async function refreshEmails() {
   await loadEmails();
 }
 
+function selectLimit(value: number) {
+  limitInput.value = String(value);
+  limitMenuActive.value = false;
+}
+
 async function loadNextPage() {
   if (!afterCursor.value) return;
 
@@ -547,7 +577,41 @@ onMounted(async () => {
 }
 
 .dreamui-resend__limit {
-  width: 112px;
+  width: 140px;
+}
+
+.dreamui-resend__open-indicator {
+  transition: transform var(--fast) var(--transition);
+}
+
+.dreamui-resend__open-indicator.open {
+  transform: rotate(180deg);
+}
+
+.dreamui-resend__limit-popover {
+  min-width: 140px;
+  padding: 8px;
+  border: 1px solid var(--theme--form--field--input--border-color);
+  border-radius: var(--theme--border-radius);
+  background: var(--theme--background);
+  box-shadow: var(--theme--box-shadow);
+}
+
+.dreamui-resend__limit-option {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: calc(var(--theme--border-radius) - 4px);
+  background: transparent;
+  color: var(--theme--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dreamui-resend__limit-option:hover,
+.dreamui-resend__limit-option.active {
+  background: var(--theme--background-subdued);
 }
 
 .dreamui-resend__state {

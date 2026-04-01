@@ -14,5 +14,16 @@ database
 !extensions/directus-extension-dreamui-icon-field/src/shims.d.ts
 !extensions/directus-extension-dreamui-icon-field/dist/
 !extensions/directus-extension-dreamui-icon-field/dist/index.js
+!extensions/directus-extension-dreamui-button-field/
+!extensions/directus-extension-dreamui-button-field/package.json
+!extensions/directus-extension-dreamui-button-field/package-lock.json
+!extensions/directus-extension-dreamui-button-field/README.md
+!extensions/directus-extension-dreamui-button-field/src/
+!extensions/directus-extension-dreamui-button-field/src/index.ts
+!extensions/directus-extension-dreamui-button-field/src/interface.vue
+!extensions/directus-extension-dreamui-button-field/src/shims.d.ts
+!extensions/directus-extension-dreamui-button-field/dist/
+!extensions/directus-extension-dreamui-button-field/dist/index.js
 extensions/directus-extension-dreamui-icon-field/node_modules
+extensions/directus-extension-dreamui-button-field/node_modules
 directus-temp

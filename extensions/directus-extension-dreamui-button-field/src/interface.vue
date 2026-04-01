@@ -51,7 +51,7 @@
       <div class="dreamui-button-field__icon">
         <div class="dreamui-button-field__section-header dreamui-button-field__section-header--tight">
           <span class="dreamui-button-field__label">Icon</span>
-          <span class="dreamui-button-field__hint">Uses the DreamUI icon picker when it is installed</span>
+          <span class="dreamui-button-field__hint">Icon value stored in the same format as DreamUI Icons</span>
         </div>
 
         <component
@@ -62,11 +62,11 @@
         />
 
         <div v-else class="dreamui-button-field__fallback">
-          <VNotice type="warning">
+          <VNotice type="info">
             <template #default>
               <div class="dreamui-button-field__notice">
-                <strong>`dreamui-icon-field` is not installed.</strong>
-                <span>Install it to get the icon picker. For now you can paste the stored icon JSON manually.</span>
+                <strong>Embedded DreamUI icon picker is unavailable in this context.</strong>
+                <span>Directus does not reliably expose another custom interface as a nested field here, so this falls back to the stored icon JSON value.</span>
               </div>
             </template>
           </VNotice>
@@ -203,28 +203,6 @@
         </label>
       </div>
     </div>
-
-    <div class="dreamui-button-field__summary">
-      <span class="dreamui-button-field__title">Summary</span>
-      <div class="dreamui-button-field__summary-card">
-        <div class="dreamui-button-field__summary-line">
-          <span class="dreamui-button-field__summary-key">Label</span>
-          <span>{{ draft.title || 'Untitled button' }}</span>
-        </div>
-        <div class="dreamui-button-field__summary-line">
-          <span class="dreamui-button-field__summary-key">Resolved URL</span>
-          <span>{{ resolvedUrl || 'Not configured' }}</span>
-        </div>
-        <div class="dreamui-button-field__summary-line">
-          <span class="dreamui-button-field__summary-key">Style</span>
-          <span>{{ selectedStyleLabel }}</span>
-        </div>
-        <div class="dreamui-button-field__summary-line">
-          <span class="dreamui-button-field__summary-key">Target</span>
-          <span>{{ selectedTargetLabel }}</span>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -349,19 +327,6 @@ export default defineComponent({
       return otherUrlItems.find((item) => item.value === draft.value.otherUrl)?.text ?? 'Home';
     });
 
-    const resolvedUrl = computed(() => {
-      if (draft.value.urlType === 'url_page') return draft.value.page.trim();
-      if (draft.value.urlType === 'custom_url') return draft.value.customUrl.trim();
-
-      const presetMap: Record<OtherUrl, string> = {
-        home: '/',
-        blog: '/blog',
-        portfolio: '/portfolio',
-      };
-
-      return presetMap[draft.value.otherUrl];
-    });
-
     watch(
       () => props.value,
       (value) => {
@@ -385,7 +350,6 @@ export default defineComponent({
       onIconInput,
       otherUrlItems,
       otherUrlMenuActive,
-      resolvedUrl,
       selectedOtherUrlLabel,
       selectedStyleLabel,
       selectedTargetLabel,
@@ -408,8 +372,7 @@ export default defineComponent({
   gap: 1rem;
 }
 
-.dreamui-button-field__section,
-.dreamui-button-field__summary {
+.dreamui-button-field__section {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
@@ -473,29 +436,6 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-}
-
-.dreamui-button-field__summary-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-}
-
-.dreamui-button-field__summary-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.625rem;
-  border-bottom: var(--theme--border-width) solid var(--theme--border-color-subdued);
-}
-
-.dreamui-button-field__summary-line:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.dreamui-button-field__summary-key {
-  color: var(--theme--foreground-subdued);
 }
 
 .dreamui-select-popover {

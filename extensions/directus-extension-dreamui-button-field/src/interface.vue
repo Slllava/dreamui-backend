@@ -17,7 +17,7 @@
     <div v-if="activeTab === 'content'" class="dreamui-button-field__section">
       <div class="dreamui-button-field__section-header">
         <span class="dreamui-button-field__title">Content</span>
-        <span class="dreamui-button-field__hint">Main button label and optional icon</span>
+        <span class="dreamui-button-field__hint">Main button label and optional arrow icon</span>
       </div>
 
       <div class="dreamui-button-field__grid">
@@ -25,37 +25,15 @@
           <span class="dreamui-button-field__label">Title</span>
           <VInput v-model="draft.title" placeholder="Learn more" @update:model-value="emitDraft" />
         </label>
-      </div>
 
-      <div class="dreamui-button-field__icon">
-        <div class="dreamui-button-field__section-header dreamui-button-field__section-header--tight">
-          <span class="dreamui-button-field__label">Icon</span>
-          <span class="dreamui-button-field__hint">Uses the standard Directus icon picker when available</span>
-        </div>
-
-        <component
-          :is="standardIconInterfaceComponent"
-          v-if="standardIconInterfaceComponent"
-          :value="draft.icon"
-          @input="onIconInput"
-        />
-
-        <div v-else class="dreamui-button-field__fallback">
-          <VNotice type="info">
-            <template #default>
-              <div class="dreamui-button-field__notice">
-                <strong>Embedded Directus icon picker is unavailable in this context.</strong>
-                <span>This falls back to a plain string value for the icon name.</span>
-              </div>
-            </template>
-          </VNotice>
-
-          <VInput
-            :model-value="draft.icon"
-            placeholder="arrow_right_alt"
-            @update:model-value="onIconInput"
+        <label class="dreamui-button-field__control dreamui-button-field__control--checkbox">
+          <span class="dreamui-button-field__label">Arrow icon</span>
+          <VCheckbox
+            :model-value="draft.hasArrowIcon"
+            label="Show arrow icon"
+            @update:model-value="onArrowIconToggle"
           />
-        </div>
+        </label>
       </div>
     </div>
 
@@ -332,7 +310,7 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, watch, onMounted } from 'vue';
-import { useApi, useExtensions } from '@directus/extensions-sdk';
+import { useApi } from '@directus/extensions-sdk';
 
 type UrlType = 'url_page' | 'custom_url' | 'url_other';
 type ButtonStyle = 'primary' | 'outline' | 'icon';
@@ -351,7 +329,7 @@ type ButtonValue = {
   style: ButtonStyle;
   size: ButtonSize;
   color: string;
-  icon: string | null;
+  hasArrowIcon: boolean;
 };
 
 type PageOption = {
@@ -370,7 +348,7 @@ const DEFAULT_VALUE: ButtonValue = {
   style: 'primary',
   size: 'medium',
   color: '',
-  icon: null,
+  hasArrowIcon: false,
 };
 
 const tabs = [
@@ -436,7 +414,12 @@ function normalizeValue(value: string | null): ButtonValue {
           ? parsed.size
           : DEFAULT_VALUE.size,
       color: typeof parsed.color === 'string' ? parsed.color : DEFAULT_VALUE.color,
-      icon: typeof parsed.icon === 'string' ? parsed.icon : null,
+      hasArrowIcon:
+        typeof parsed.hasArrowIcon === 'boolean'
+          ? parsed.hasArrowIcon
+          : parsed.icon === 'arrow_right_alt' || parsed.icon === 'arrow_forward'
+            ? true
+            : DEFAULT_VALUE.hasArrowIcon,
     };
   } catch {
     return { ...DEFAULT_VALUE };
@@ -457,7 +440,6 @@ export default defineComponent({
   emits: ['input'],
   setup(props, { emit }) {
     const api = useApi();
-    const extensions = useExtensions();
     const activeTab = ref<SettingsTab>('content');
     const draft = ref<ButtonValue>(normalizeValue(props.value));
 
@@ -472,10 +454,6 @@ export default defineComponent({
     const pagesLoading = ref(false);
     const pageOptions = ref<PageOption[]>([]);
     const pageSearchQuery = ref('');
-
-    const standardIconInterfaceComponent = computed(() => {
-      return extensions.value?.interfaces?.['select-icon']?.component ?? null;
-    });
 
     const selectedStyleLabel = computed(() => {
       return styleItems.find((item) => item.value === draft.value.style)?.text ?? 'Primary';
@@ -575,12 +553,13 @@ export default defineComponent({
     });
 
     function emitDraft() {
-      emit('input', JSON.stringify(draft.value));
-    }
-
-    function onIconInput(value: string | null) {
-      draft.value.icon = value || null;
-      emitDraft();
+      emit(
+        'input',
+        JSON.stringify({
+          ...draft.value,
+          icon: draft.value.hasArrowIcon ? 'arrow_right_alt' : null,
+        }),
+      );
     }
 
     function onPageSearchInput(value: string | number | null) {
@@ -592,6 +571,11 @@ export default defineComponent({
       emitDraft();
     }
 
+    function onArrowIconToggle(value: boolean | string | number | null) {
+      draft.value.hasArrowIcon = value === true;
+      emitDraft();
+    }
+
     return {
       activeTab,
       colorPickerValue,
@@ -599,7 +583,7 @@ export default defineComponent({
       emitDraft,
       filteredPageOptions,
       onColorPickerInput,
-      onIconInput,
+      onArrowIconToggle,
       onPageSearchInput,
       otherUrlItems,
       otherUrlMenuActive,
@@ -612,7 +596,6 @@ export default defineComponent({
       selectedPageLabel,
       selectedSizeLabel,
       selectedStyleLabel,
-      standardIconInterfaceComponent,
       sizeItems,
       sizeMenuActive,
       selectedTargetLabel,
@@ -706,6 +689,10 @@ export default defineComponent({
   gap: 0.4375rem;
 }
 
+.dreamui-button-field__control--checkbox {
+  justify-content: flex-end;
+}
+
 .dreamui-button-field__control--full {
   grid-column: 1 / -1;
 }
@@ -714,19 +701,6 @@ export default defineComponent({
   color: var(--theme--foreground-subdued);
   font-size: 0.875rem;
   font-weight: 600;
-}
-
-.dreamui-button-field__icon,
-.dreamui-button-field__fallback {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.dreamui-button-field__notice {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
 }
 
 .dreamui-button-field__empty {

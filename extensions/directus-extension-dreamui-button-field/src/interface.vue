@@ -274,6 +274,41 @@
         </label>
 
         <label class="dreamui-button-field__control">
+          <span class="dreamui-button-field__label">Size</span>
+          <VMenu v-model="sizeMenuActive" attached>
+            <template #activator="{ active, toggle }">
+              <VInput :model-value="selectedSizeLabel" readonly @click="toggle">
+                <template #append>
+                  <VIcon clickable name="expand_more" class="open-indicator" :class="{ open: active }" @click="toggle" />
+                </template>
+              </VInput>
+            </template>
+
+            <div class="dreamui-select-popover">
+              <button
+                v-for="item in sizeItems"
+                :key="item.value"
+                type="button"
+                class="dreamui-select-option"
+                :class="{ active: item.value === draft.size }"
+                @click="
+                  () => {
+                    draft.size = item.value;
+                    sizeMenuActive = false;
+                    emitDraft();
+                  }
+                "
+              >
+                <div class="dreamui-select-option__content">
+                  <span>{{ item.text }}</span>
+                  <span class="dreamui-select-option__note">{{ item.note }}</span>
+                </div>
+              </button>
+            </div>
+          </VMenu>
+        </label>
+
+        <label class="dreamui-button-field__control">
           <span class="dreamui-button-field__label">Color</span>
           <div class="dreamui-button-field__color-row">
             <input
@@ -301,6 +336,7 @@ import { useApi, useExtensions } from '@directus/extensions-sdk';
 
 type UrlType = 'url_page' | 'custom_url' | 'url_other';
 type ButtonStyle = 'primary' | 'outline' | 'icon';
+type ButtonSize = 'small' | 'medium' | 'large';
 type ButtonTarget = '_self' | '_blank';
 type OtherUrl = 'home' | 'blog' | 'portfolio';
 type SettingsTab = 'content' | 'link' | 'styles';
@@ -313,6 +349,7 @@ type ButtonValue = {
   customUrl: string;
   otherUrl: OtherUrl;
   style: ButtonStyle;
+  size: ButtonSize;
   color: string;
   icon: string | null;
 };
@@ -331,6 +368,7 @@ const DEFAULT_VALUE: ButtonValue = {
   customUrl: '',
   otherUrl: 'home',
   style: 'primary',
+  size: 'medium',
   color: '',
   icon: null,
 };
@@ -364,6 +402,12 @@ const styleItems = [
   { text: 'Icon', value: 'icon', note: 'Compact icon-driven button' },
 ] as const;
 
+const sizeItems = [
+  { text: 'Small', value: 'small', note: 'Compact button size' },
+  { text: 'Medium', value: 'medium', note: 'Default balanced size' },
+  { text: 'Large', value: 'large', note: 'More prominent button size' },
+] as const;
+
 function normalizeValue(value: string | null): ButtonValue {
   if (!value) return { ...DEFAULT_VALUE };
 
@@ -387,6 +431,10 @@ function normalizeValue(value: string | null): ButtonValue {
         parsed.style === 'outline' || parsed.style === 'icon' || parsed.style === 'primary'
           ? parsed.style
           : DEFAULT_VALUE.style,
+      size:
+        parsed.size === 'small' || parsed.size === 'large' || parsed.size === 'medium'
+          ? parsed.size
+          : DEFAULT_VALUE.size,
       color: typeof parsed.color === 'string' ? parsed.color : DEFAULT_VALUE.color,
       icon: typeof parsed.icon === 'string' ? parsed.icon : null,
     };
@@ -414,6 +462,7 @@ export default defineComponent({
     const draft = ref<ButtonValue>(normalizeValue(props.value));
 
     const styleMenuActive = ref(false);
+    const sizeMenuActive = ref(false);
     const targetMenuActive = ref(false);
     const urlTypeMenuActive = ref(false);
     const otherUrlMenuActive = ref(false);
@@ -430,6 +479,10 @@ export default defineComponent({
 
     const selectedStyleLabel = computed(() => {
       return styleItems.find((item) => item.value === draft.value.style)?.text ?? 'Primary';
+    });
+
+    const selectedSizeLabel = computed(() => {
+      return sizeItems.find((item) => item.value === draft.value.size)?.text ?? 'Medium';
     });
 
     const selectedTargetLabel = computed(() => {
@@ -557,8 +610,11 @@ export default defineComponent({
       pagesLoading,
       selectedOtherUrlLabel,
       selectedPageLabel,
+      selectedSizeLabel,
       selectedStyleLabel,
       standardIconInterfaceComponent,
+      sizeItems,
+      sizeMenuActive,
       selectedTargetLabel,
       selectedUrlTypeLabel,
       styleItems,

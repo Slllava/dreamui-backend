@@ -24,6 +24,8 @@
     "npm": ">=10"
   },
   "dependencies": {
+    "@directus-labs/card-select-interfaces": "^1.0.0",
+    "@directus-labs/seo-plugin": "^1.1.1",
     "directus": "^11.17.1",
     "pg": "^8.20.0"
   }

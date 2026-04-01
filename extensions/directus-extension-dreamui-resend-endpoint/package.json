@@ -1,0 +1,26 @@
+{
+  "name": "directus-extension-dreamui-resend-endpoint",
+  "description": "Directus endpoint proxy for Resend email activity",
+  "icon": "mail",
+  "version": "1.0.0",
+  "license": "ISC",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "directus:extension": {
+    "type": "endpoint",
+    "path": "dist/index.js",
+    "source": "src/index.ts",
+    "host": "^11.0.0"
+  },
+  "scripts": {
+    "build": "directus-extension build",
+    "dev": "directus-extension build -w --no-minify",
+    "link": "directus-extension link",
+    "validate": "directus-extension validate"
+  },
+  "devDependencies": {
+    "@directus/extensions-sdk": "^17.1.1"
+  }
+}

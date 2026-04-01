@@ -2,17 +2,31 @@
   <private-view title="Resend Emails">
     <template #navigation>
       <div class="dreamui-resend__navigation">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          class="dreamui-resend__nav-item"
-          :class="{ active: activeTab === tab.value }"
-          type="button"
-          @click="activeTab = tab.value"
-        >
-          <v-icon :name="tab.icon" />
-          <span>{{ tab.label }}</span>
-        </button>
+        <div class="dreamui-resend__nav-group">
+          <button
+            class="dreamui-resend__nav-item"
+            :class="{ active: activeTab === 'emails' }"
+            type="button"
+            @click="activeTab = 'emails'"
+          >
+            <v-icon name="mail" />
+            <span>Emails</span>
+          </button>
+        </div>
+
+        <div class="dreamui-resend__nav-divider" />
+
+        <div class="dreamui-resend__nav-group">
+          <button
+            class="dreamui-resend__nav-item"
+            :class="{ active: activeTab === 'settings' }"
+            type="button"
+            @click="activeTab = 'settings'"
+          >
+            <v-icon name="settings" />
+            <span>Settings</span>
+          </button>
+        </div>
       </div>
     </template>
 
@@ -330,11 +344,6 @@ type ListResponse = {
 
 const api = useApi();
 
-const tabs = [
-  { value: 'emails' as TabValue, label: 'Emails', icon: 'mail' },
-  { value: 'settings' as TabValue, label: 'Settings', icon: 'settings' },
-];
-
 const activeTab = ref<TabValue>('emails');
 const searchQuery = ref('');
 const limitInput = ref('20');
@@ -532,17 +541,30 @@ onMounted(async () => {
 .dreamui-resend__navigation {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
+  gap: 18px;
+  padding: 20px 18px;
+}
+
+.dreamui-resend__nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dreamui-resend__nav-divider {
+  height: 2px;
+  margin: 0 16px;
+  background: var(--theme--border-color-subdued);
+  opacity: 0.9;
 }
 
 .dreamui-resend__nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
-  min-height: 40px;
-  padding: 10px 12px;
+  min-height: 64px;
+  padding: 0 18px;
   border: 0;
   border-radius: var(--theme--border-radius);
   background: transparent;
@@ -550,11 +572,20 @@ onMounted(async () => {
   cursor: pointer;
   font: inherit;
   text-align: left;
+  font-size: 1rem;
+  line-height: 1.2;
+  transition: background-color var(--fast) var(--transition), color var(--fast) var(--transition);
 }
 
-.dreamui-resend__nav-item:hover {
+.dreamui-resend__nav-item :deep(.v-icon) {
+  color: currentColor;
+}
+
+.dreamui-resend__nav-item:hover,
+.dreamui-resend__nav-item:focus-visible {
   background: var(--theme--background-normal);
   color: var(--theme--foreground);
+  outline: none;
 }
 
 .dreamui-resend__nav-item.active {

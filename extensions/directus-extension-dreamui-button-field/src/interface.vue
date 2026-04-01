@@ -30,12 +30,12 @@
       <div class="dreamui-button-field__icon">
         <div class="dreamui-button-field__section-header dreamui-button-field__section-header--tight">
           <span class="dreamui-button-field__label">Icon</span>
-          <span class="dreamui-button-field__hint">Icon value stored in the same format as DreamUI Icons</span>
+          <span class="dreamui-button-field__hint">Uses the standard Directus icon picker when available</span>
         </div>
 
         <component
-          :is="iconInterfaceComponent"
-          v-if="iconInterfaceComponent"
+          :is="standardIconInterfaceComponent"
+          v-if="standardIconInterfaceComponent"
           :value="draft.icon"
           @input="onIconInput"
         />
@@ -44,15 +44,15 @@
           <VNotice type="info">
             <template #default>
               <div class="dreamui-button-field__notice">
-                <strong>Embedded DreamUI icon picker is unavailable in this context.</strong>
-                <span>Directus does not reliably expose another custom interface as a nested field here, so this falls back to the stored icon JSON value.</span>
+                <strong>Embedded Directus icon picker is unavailable in this context.</strong>
+                <span>This falls back to a plain string value for the icon name.</span>
               </div>
             </template>
           </VNotice>
 
           <VInput
             :model-value="draft.icon"
-            placeholder='{"library":"lucide","name":"ArrowRight","strokeWidth":2}'
+            placeholder="arrow_right_alt"
             @update:model-value="onIconInput"
           />
         </div>
@@ -424,8 +424,8 @@ export default defineComponent({
     const pageOptions = ref<PageOption[]>([]);
     const pageSearchQuery = ref('');
 
-    const iconInterfaceComponent = computed(() => {
-      return extensions.value?.interfaces?.['dreamui-icon-field']?.component ?? null;
+    const standardIconInterfaceComponent = computed(() => {
+      return extensions.value?.interfaces?.['select-icon']?.component ?? null;
     });
 
     const selectedStyleLabel = computed(() => {
@@ -545,7 +545,6 @@ export default defineComponent({
       draft,
       emitDraft,
       filteredPageOptions,
-      iconInterfaceComponent,
       onColorPickerInput,
       onIconInput,
       onPageSearchInput,
@@ -559,6 +558,7 @@ export default defineComponent({
       selectedOtherUrlLabel,
       selectedPageLabel,
       selectedStyleLabel,
+      standardIconInterfaceComponent,
       selectedTargetLabel,
       selectedUrlTypeLabel,
       styleItems,

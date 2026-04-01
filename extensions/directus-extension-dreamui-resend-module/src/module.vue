@@ -70,7 +70,7 @@
               </div>
             </v-menu>
 
-            <v-button secondary :disabled="loading" @click="refreshEmails">
+            <v-button secondary small :disabled="loading" @click="refreshEmails">
               <v-icon name="refresh" left />
               Refresh
             </v-button>

@@ -27,6 +27,7 @@
     "@directus-labs/card-select-interfaces": "^1.0.0",
     "@directus-labs/seo-plugin": "^1.1.1",
     "directus": "^11.17.1",
+    "directus-slug-generator": "github:markosiilak/directus-slug-generator",
     "pg": "^8.20.0"
   }
 }

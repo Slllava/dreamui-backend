@@ -330,7 +330,7 @@ export default defineComponent({
     const otherUrlMenuActive = ref(false);
 
     const iconInterfaceComponent = computed(() => {
-      return extensions.value.interfaces?.['dreamui-icon-field']?.component ?? null;
+      return extensions.value?.interfaces?.['dreamui-icon-field']?.component ?? null;
     });
 
     const selectedStyleLabel = computed(() => {

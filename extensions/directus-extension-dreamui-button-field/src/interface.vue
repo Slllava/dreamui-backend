@@ -550,7 +550,8 @@ export default defineComponent({
     });
 
     const selectedUrlTypeLabel = computed(() => {
-      return urlTypeItems.value.find((item) => item.value === draft.value.urlType)?.text ?? 'URL page';
+      const items = Array.isArray(urlTypeItems.value) ? urlTypeItems.value : [];
+      return items.find((item) => item.value === draft.value.urlType)?.text ?? 'URL page';
     });
 
     const selectedOtherUrlLabel = computed(() => {
@@ -685,15 +686,16 @@ export default defineComponent({
           })
           .filter((item: PageOption | null): item is PageOption => item !== null)
           .sort((a, b) => a.text.localeCompare(b.text));
-      } catch {
+      } catch (error) {
         formsCollectionExists.value = false;
         formOptions.value = [];
         syncUrlTypeItems();
 
         if (draft.value.urlType === 'form') {
           draft.value.urlType = 'url_page';
-          emitDraft();
         }
+
+        console.error('DreamUI Button: failed to load forms collection', error);
       } finally {
         formsLoading.value = false;
       }

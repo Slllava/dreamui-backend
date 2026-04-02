@@ -167,6 +167,59 @@
           />
         </div>
 
+        <div v-if="draft.urlType === 'form'" class="dreamui-button-field__control dreamui-button-field__control--full">
+          <span class="dreamui-button-field__label">Form</span>
+
+          <VMenu v-if="formsCollectionExists" v-model="formMenuActive" attached>
+            <template #activator="{ active, toggle }">
+              <VInput
+                :model-value="formSearchQuery || selectedFormLabel"
+                :placeholder="formsLoading ? 'Loading forms...' : 'Choose a form...'"
+                @click="toggle"
+                @update:model-value="onFormSearchInput"
+              >
+                <template #append>
+                  <VIcon clickable name="expand_more" class="open-indicator" :class="{ open: active }" @click="toggle" />
+                </template>
+              </VInput>
+            </template>
+
+            <div class="dreamui-select-popover dreamui-select-popover--pages">
+              <div v-if="formsLoading" class="dreamui-button-field__empty">Loading forms...</div>
+              <div v-else-if="filteredFormOptions.length === 0" class="dreamui-button-field__empty">No forms found</div>
+
+              <button
+                v-for="item in filteredFormOptions"
+                v-else
+                :key="item.value"
+                type="button"
+                class="dreamui-select-option"
+                :class="{ active: item.value === draft.form }"
+                @click="
+                  () => {
+                    draft.form = item.value;
+                    formSearchQuery = '';
+                    formMenuActive = false;
+                    emitDraft();
+                  }
+                "
+              >
+                <div class="dreamui-select-option__content">
+                  <span>{{ item.text }}</span>
+                  <span v-if="item.note" class="dreamui-select-option__note">{{ item.note }}</span>
+                </div>
+              </button>
+            </div>
+          </VMenu>
+
+          <VInput
+            v-else
+            v-model="draft.form"
+            placeholder="contact-form"
+            @update:model-value="emitDraft"
+          />
+        </div>
+
         <label v-if="draft.urlType === 'custom_url'" class="dreamui-button-field__control dreamui-button-field__control--full">
           <span class="dreamui-button-field__label">Custom URL</span>
           <VInput v-model="draft.customUrl" placeholder="https://example.com" @update:model-value="emitDraft" />
@@ -312,7 +365,7 @@
 import { defineComponent, computed, ref, watch, onMounted } from 'vue';
 import { useApi } from '@directus/extensions-sdk';
 
-type UrlType = 'url_page' | 'custom_url' | 'url_other';
+type UrlType = 'url_page' | 'custom_url' | 'url_other' | 'form';
 type ButtonStyle = 'primary' | 'outline' | 'icon';
 type ButtonSize = 'small' | 'medium' | 'large';
 type ButtonTarget = '_self' | '_blank';
@@ -324,6 +377,7 @@ type ButtonValue = {
   target: ButtonTarget;
   urlType: UrlType;
   page: string;
+  form: string;
   customUrl: string;
   otherUrl: OtherUrl;
   style: ButtonStyle;
@@ -343,6 +397,7 @@ const DEFAULT_VALUE: ButtonValue = {
   target: '_self',
   urlType: 'url_page',
   page: '',
+  form: '',
   customUrl: '',
   otherUrl: 'home',
   style: 'primary',
@@ -360,12 +415,6 @@ const tabs = [
 const targetItems = [
   { text: 'Same tab', value: '_self', note: 'Open inside the current tab' },
   { text: 'New tab', value: '_blank', note: 'Open in a new browser tab' },
-] as const;
-
-const urlTypeItems = [
-  { text: 'URL page', value: 'url_page', note: 'Internal page or route slug' },
-  { text: 'Custom URL', value: 'custom_url', note: 'Any absolute or relative URL' },
-  { text: 'URL other', value: 'url_other', note: 'Choose from fixed preset routes' },
 ] as const;
 
 const otherUrlItems = [
@@ -396,10 +445,14 @@ function normalizeValue(value: string | null): ButtonValue {
       title: typeof parsed.title === 'string' ? parsed.title : DEFAULT_VALUE.title,
       target: parsed.target === '_blank' ? '_blank' : DEFAULT_VALUE.target,
       urlType:
-        parsed.urlType === 'custom_url' || parsed.urlType === 'url_other' || parsed.urlType === 'url_page'
+        parsed.urlType === 'custom_url' ||
+        parsed.urlType === 'url_other' ||
+        parsed.urlType === 'url_page' ||
+        parsed.urlType === 'form'
           ? parsed.urlType
           : DEFAULT_VALUE.urlType,
       page: typeof parsed.page === 'string' ? parsed.page : DEFAULT_VALUE.page,
+      form: typeof parsed.form === 'string' ? parsed.form : DEFAULT_VALUE.form,
       customUrl: typeof parsed.customUrl === 'string' ? parsed.customUrl : DEFAULT_VALUE.customUrl,
       otherUrl:
         parsed.otherUrl === 'blog' || parsed.otherUrl === 'portfolio' || parsed.otherUrl === 'home'
@@ -449,11 +502,34 @@ export default defineComponent({
     const urlTypeMenuActive = ref(false);
     const otherUrlMenuActive = ref(false);
     const pageMenuActive = ref(false);
+    const formMenuActive = ref(false);
 
     const pagesCollectionExists = ref(false);
     const pagesLoading = ref(false);
     const pageOptions = ref<PageOption[]>([]);
     const pageSearchQuery = ref('');
+    const formsCollectionExists = ref(false);
+    const formsLoading = ref(false);
+    const formOptions = ref<PageOption[]>([]);
+    const formSearchQuery = ref('');
+
+    const urlTypeItems = computed(() => {
+      const items = [
+        { text: 'URL page', value: 'url_page', note: 'Internal page or route slug' },
+        { text: 'Custom URL', value: 'custom_url', note: 'Any absolute or relative URL' },
+        { text: 'URL other', value: 'url_other', note: 'Choose from fixed preset routes' },
+      ];
+
+      if (formsCollectionExists.value) {
+        items.splice(1, 0, {
+          text: 'Form',
+          value: 'form',
+          note: 'Link this button to a form from the forms collection',
+        });
+      }
+
+      return items;
+    });
 
     const selectedStyleLabel = computed(() => {
       return styleItems.find((item) => item.value === draft.value.style)?.text ?? 'Primary';
@@ -485,6 +561,20 @@ export default defineComponent({
       const query = pageSearchQuery.value.toLowerCase();
 
       return pageOptions.value.filter((item) => {
+        return item.text.toLowerCase().includes(query) || item.note.toLowerCase().includes(query);
+      });
+    });
+
+    const selectedFormLabel = computed(() => {
+      return formOptions.value.find((item) => item.value === draft.value.form)?.text ?? draft.value.form;
+    });
+
+    const filteredFormOptions = computed(() => {
+      if (!formSearchQuery.value) return formOptions.value;
+
+      const query = formSearchQuery.value.toLowerCase();
+
+      return formOptions.value.filter((item) => {
         return item.text.toLowerCase().includes(query) || item.note.toLowerCase().includes(query);
       });
     });
@@ -548,8 +638,62 @@ export default defineComponent({
       }
     }
 
+    async function loadForms() {
+      formsLoading.value = true;
+
+      try {
+        const fieldsResponse = await api.get('/fields/forms');
+        const fields = Array.isArray(fieldsResponse.data?.data) ? fieldsResponse.data.data : [];
+        const fieldNames = new Set<string>(fields.map((field: { field?: string }) => field.field || '').filter(Boolean));
+
+        formsCollectionExists.value = true;
+
+        const labelField =
+          ['title', 'name', 'label', 'slug', 'id'].find((field) => fieldNames.has(field)) ?? 'id';
+        const valueField =
+          ['slug', 'key', 'id'].find((field) => fieldNames.has(field)) ?? labelField;
+
+        const queryFields = Array.from(new Set([labelField, valueField, 'id']));
+        const itemsResponse = await api.get('/items/forms', {
+          params: {
+            fields: queryFields.join(','),
+            limit: -1,
+          },
+        });
+
+        const items = Array.isArray(itemsResponse.data?.data) ? itemsResponse.data.data : [];
+
+        formOptions.value = items
+          .map((item: Record<string, unknown>) => {
+            const value = String(item[valueField] ?? item.id ?? '').trim();
+            const text = String(item[labelField] ?? value).trim();
+
+            if (!value || !text) return null;
+
+            return {
+              text,
+              value,
+              note: labelField === valueField ? '' : value,
+            };
+          })
+          .filter((item: PageOption | null): item is PageOption => item !== null)
+          .sort((a, b) => a.text.localeCompare(b.text));
+      } catch {
+        formsCollectionExists.value = false;
+        formOptions.value = [];
+
+        if (draft.value.urlType === 'form') {
+          draft.value.urlType = 'url_page';
+          emitDraft();
+        }
+      } finally {
+        formsLoading.value = false;
+      }
+    }
+
     onMounted(() => {
       loadPages();
+      loadForms();
     });
 
     function emitDraft() {
@@ -564,6 +708,10 @@ export default defineComponent({
 
     function onPageSearchInput(value: string | number | null) {
       pageSearchQuery.value = typeof value === 'string' ? value : '';
+    }
+
+    function onFormSearchInput(value: string | number | null) {
+      formSearchQuery.value = typeof value === 'string' ? value : '';
     }
 
     function onColorPickerInput(event: Event) {
@@ -581,9 +729,16 @@ export default defineComponent({
       colorPickerValue,
       draft,
       emitDraft,
+      filteredFormOptions,
       filteredPageOptions,
+      formMenuActive,
+      formOptions,
+      formSearchQuery,
+      formsCollectionExists,
+      formsLoading,
       onColorPickerInput,
       onArrowIconToggle,
+      onFormSearchInput,
       onPageSearchInput,
       otherUrlItems,
       otherUrlMenuActive,
@@ -592,6 +747,7 @@ export default defineComponent({
       pageSearchQuery,
       pagesCollectionExists,
       pagesLoading,
+      selectedFormLabel,
       selectedOtherUrlLabel,
       selectedPageLabel,
       selectedSizeLabel,

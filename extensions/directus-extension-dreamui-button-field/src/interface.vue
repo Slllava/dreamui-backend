@@ -513,7 +513,13 @@ export default defineComponent({
     const formOptions = ref<PageOption[]>([]);
     const formSearchQuery = ref('');
 
-    const urlTypeItems = computed(() => {
+    const urlTypeItems = ref([
+      { text: 'URL page', value: 'url_page', note: 'Internal page or route slug' },
+      { text: 'Custom URL', value: 'custom_url', note: 'Any absolute or relative URL' },
+      { text: 'URL other', value: 'url_other', note: 'Choose from fixed preset routes' },
+    ]);
+
+    function syncUrlTypeItems() {
       const items = [
         { text: 'URL page', value: 'url_page', note: 'Internal page or route slug' },
         { text: 'Custom URL', value: 'custom_url', note: 'Any absolute or relative URL' },
@@ -528,8 +534,8 @@ export default defineComponent({
         });
       }
 
-      return items;
-    });
+      urlTypeItems.value = items;
+    }
 
     const selectedStyleLabel = computed(() => {
       return styleItems.find((item) => item.value === draft.value.style)?.text ?? 'Primary';
@@ -647,6 +653,7 @@ export default defineComponent({
         const fieldNames = new Set<string>(fields.map((field: { field?: string }) => field.field || '').filter(Boolean));
 
         formsCollectionExists.value = true;
+        syncUrlTypeItems();
 
         const labelField =
           ['title', 'name', 'label', 'slug', 'id'].find((field) => fieldNames.has(field)) ?? 'id';
@@ -681,6 +688,7 @@ export default defineComponent({
       } catch {
         formsCollectionExists.value = false;
         formOptions.value = [];
+        syncUrlTypeItems();
 
         if (draft.value.urlType === 'form') {
           draft.value.urlType = 'url_page';
@@ -692,6 +700,7 @@ export default defineComponent({
     }
 
     onMounted(() => {
+      syncUrlTypeItems();
       loadPages();
       loadForms();
     });

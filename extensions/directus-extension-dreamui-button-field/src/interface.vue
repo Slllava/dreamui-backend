@@ -544,7 +544,7 @@ export default defineComponent({
     });
 
     const selectedUrlTypeLabel = computed(() => {
-      return urlTypeItems.find((item) => item.value === draft.value.urlType)?.text ?? 'URL page';
+      return urlTypeItems.value.find((item) => item.value === draft.value.urlType)?.text ?? 'URL page';
     });
 
     const selectedOtherUrlLabel = computed(() => {

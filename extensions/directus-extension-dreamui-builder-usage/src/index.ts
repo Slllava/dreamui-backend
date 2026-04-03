@@ -16,8 +16,11 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-collection',
         note: 'Collection that stores Builder rows, for example pages_builder or pages_blocks',
+        options: {
+          includeSystem: false,
+        },
       },
       schema: {
         default_value: 'pages_builder',
@@ -29,8 +32,11 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-collection',
         note: 'Collection that represents pages',
+        options: {
+          includeSystem: false,
+        },
       },
       schema: {
         default_value: 'pages',
@@ -42,8 +48,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'M2O field on the junction row that points to the page',
+        options: {
+          collectionField: 'junctionCollection',
+          allowNone: false,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'pages_id',
@@ -55,8 +66,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Field on the junction row that stores the linked block id',
+        options: {
+          collectionField: 'junctionCollection',
+          allowNone: false,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'item',
@@ -68,8 +84,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Field on the junction row that stores the linked block collection name',
+        options: {
+          collectionField: 'junctionCollection',
+          allowNone: false,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'collection',
@@ -81,8 +102,12 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-collection',
         note: 'Optional. Use only if the current block collection name must be forced manually',
+        options: {
+          includeSystem: false,
+          allowNone: true,
+        },
       },
     },
     {
@@ -91,8 +116,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Field to show as the main page label',
+        options: {
+          collectionField: 'pageCollection',
+          allowNone: false,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'title',
@@ -104,8 +134,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Optional secondary field like slug, permalink, or path',
+        options: {
+          collectionField: 'pageCollection',
+          allowNone: true,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'slug',
@@ -117,8 +152,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Optional status field to display on each linked page',
+        options: {
+          collectionField: 'pageCollection',
+          allowNone: true,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'status',
@@ -130,8 +170,13 @@ export default defineInterface({
       type: 'string',
       meta: {
         width: 'half',
-        interface: 'input',
+        interface: 'system-field',
         note: 'Optional. Sort linked pages by a field on the page relation, for example title or sort',
+        options: {
+          collectionField: 'pageCollection',
+          allowNone: true,
+          allowPrimaryKey: true,
+        },
       },
       schema: {
         default_value: 'title',

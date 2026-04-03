@@ -9,127 +9,144 @@
       <span>Loading collections and fields...</span>
     </div>
 
-    <div v-else class="dreamui-builder-options__grid">
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Junction Collection</span>
-        <VSelect
-          :model-value="draft.junctionCollection"
-          :items="collectionItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="onCollectionChange('junctionCollection', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Collection that stores Builder rows</small>
+    <template v-else>
+      <div class="dreamui-builder-options__grid">
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Builder Collection</span>
+          <VSelect
+            :model-value="draft.junctionCollection"
+            :items="collectionItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="onCollectionChange('junctionCollection', $event)"
+          />
+          <small class="dreamui-builder-options__hint">Collection that stores rows linking pages to blocks</small>
+        </div>
+
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Page Collection</span>
+          <VSelect
+            :model-value="draft.pageCollection"
+            :items="collectionItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="onCollectionChange('pageCollection', $event)"
+          />
+          <small class="dreamui-builder-options__hint">Collection that represents pages</small>
+        </div>
+
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Page Relation Field</span>
+          <VSelect
+            :model-value="draft.junctionPageField"
+            :items="junctionFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('junctionPageField', $event)"
+          />
+          <small class="dreamui-builder-options__hint">Field in the Builder collection that points to the page</small>
+        </div>
+
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Detected Mapping</span>
+          <div class="dreamui-builder-options__summary">
+            <div><strong>Block ID field:</strong> {{ draft.junctionItemField || 'Not detected' }}</div>
+            <div><strong>Block collection field:</strong> {{ draft.junctionItemCollectionField || 'None' }}</div>
+            <div><strong>Page title field:</strong> {{ draft.pageTitleField || 'Not detected' }}</div>
+            <div><strong>Page slug field:</strong> {{ draft.pageSlugField || 'None' }}</div>
+            <div><strong>Page status field:</strong> {{ draft.pageStatusField || 'None' }}</div>
+            <div><strong>Sort field:</strong> {{ draft.sortField || 'None' }}</div>
+          </div>
+          <small class="dreamui-builder-options__hint">These values are auto-filled. Open advanced settings only if something looks wrong.</small>
+        </div>
       </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Page Collection</span>
-        <VSelect
-          :model-value="draft.pageCollection"
-          :items="collectionItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="onCollectionChange('pageCollection', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Collection that represents pages</small>
+      <div class="dreamui-builder-options__advanced-toggle">
+        <VButton secondary small @click="showAdvanced = !showAdvanced">
+          <VIcon :name="showAdvanced ? 'expand_less' : 'expand_more'" left />
+          {{ showAdvanced ? 'Hide advanced settings' : 'Show advanced settings' }}
+        </VButton>
       </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Junction Page Field</span>
-        <VSelect
-          :model-value="draft.junctionPageField"
-          :items="junctionFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('junctionPageField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">M2O field on the junction row that points to the page</small>
-      </div>
+      <div v-if="showAdvanced" class="dreamui-builder-options__grid">
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Block ID Field</span>
+          <VSelect
+            :model-value="draft.junctionItemField"
+            :items="junctionFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('junctionItemField', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Junction Item Field</span>
-        <VSelect
-          :model-value="draft.junctionItemField"
-          :items="junctionFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('junctionItemField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Field on the junction row that stores the linked block id</small>
-      </div>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Block Collection Field</span>
+          <VSelect
+            :model-value="draft.junctionItemCollectionField"
+            :items="optionalJunctionFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('junctionItemCollectionField', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Junction Item Collection Field</span>
-        <VSelect
-          :model-value="draft.junctionItemCollectionField"
-          :items="junctionFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('junctionItemCollectionField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Field on the junction row that stores the block collection name</small>
-      </div>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Current Collection Override</span>
+          <VSelect
+            :model-value="draft.currentCollectionOverride"
+            :items="optionalCollectionItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('currentCollectionOverride', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Current Collection Override</span>
-        <VSelect
-          :model-value="draft.currentCollectionOverride"
-          :items="optionalCollectionItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('currentCollectionOverride', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Optional override for the current block collection</small>
-      </div>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Page Title Field</span>
+          <VSelect
+            :model-value="draft.pageTitleField"
+            :items="pageFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('pageTitleField', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Page Title Field</span>
-        <VSelect
-          :model-value="draft.pageTitleField"
-          :items="pageFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('pageTitleField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Field to show as the main page label</small>
-      </div>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Page Slug Field</span>
+          <VSelect
+            :model-value="draft.pageSlugField"
+            :items="optionalPageFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('pageSlugField', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Page Slug Field</span>
-        <VSelect
-          :model-value="draft.pageSlugField"
-          :items="optionalPageFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('pageSlugField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Optional secondary field like slug, permalink, or path</small>
-      </div>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Page Status Field</span>
+          <VSelect
+            :model-value="draft.pageStatusField"
+            :items="optionalPageFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('pageStatusField', $event)"
+          />
+        </div>
 
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Page Status Field</span>
-        <VSelect
-          :model-value="draft.pageStatusField"
-          :items="optionalPageFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('pageStatusField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Optional status field to display on each linked page</small>
+        <div class="dreamui-builder-options__field">
+          <span class="dreamui-builder-options__label">Sort Field</span>
+          <VSelect
+            :model-value="draft.sortField"
+            :items="optionalPageFieldItems"
+            item-text="text"
+            item-value="value"
+            @update:model-value="updateField('sortField', $event)"
+          />
+        </div>
       </div>
-
-      <div class="dreamui-builder-options__field">
-        <span class="dreamui-builder-options__label">Sort Field</span>
-        <VSelect
-          :model-value="draft.sortField"
-          :items="optionalPageFieldItems"
-          item-text="text"
-          item-value="value"
-          @update:model-value="updateField('sortField', $event)"
-        />
-        <small class="dreamui-builder-options__hint">Optional field used to sort linked pages</small>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -187,10 +204,7 @@ function normalizeValue(value: unknown): OptionValue {
     pageCollection: normalizeString(input.pageCollection, DEFAULTS.pageCollection),
     junctionPageField: normalizeString(input.junctionPageField, DEFAULTS.junctionPageField),
     junctionItemField: normalizeString(input.junctionItemField, DEFAULTS.junctionItemField),
-    junctionItemCollectionField: normalizeString(
-      input.junctionItemCollectionField,
-      DEFAULTS.junctionItemCollectionField,
-    ),
+    junctionItemCollectionField: normalizeString(input.junctionItemCollectionField, DEFAULTS.junctionItemCollectionField),
     currentCollectionOverride: normalizeString(input.currentCollectionOverride),
     pageTitleField: normalizeString(input.pageTitleField, DEFAULTS.pageTitleField),
     pageSlugField: normalizeString(input.pageSlugField, DEFAULTS.pageSlugField),
@@ -211,24 +225,17 @@ export default defineComponent({
     const api = useApi();
     const loading = ref(false);
     const loadError = ref('');
+    const showAdvanced = ref(false);
     const draft = ref<OptionValue>(normalizeValue(props.value));
     const collections = ref<SelectItem[]>([]);
     const fieldsByCollection = ref<Record<string, SelectItem[]>>({});
 
     const collectionItems = computed(() => collections.value);
     const optionalCollectionItems = computed(() => [{ text: 'None', value: '' }, ...collections.value]);
-
-    const junctionFieldItems = computed(() => {
-      return fieldsByCollection.value[draft.value.junctionCollection] ?? [];
-    });
-
-    const pageFieldItems = computed(() => {
-      return fieldsByCollection.value[draft.value.pageCollection] ?? [];
-    });
-
-    const optionalPageFieldItems = computed(() => {
-      return [{ text: 'None', value: '' }, ...pageFieldItems.value];
-    });
+    const junctionFieldItems = computed(() => fieldsByCollection.value[draft.value.junctionCollection] ?? []);
+    const optionalJunctionFieldItems = computed(() => [{ text: 'None', value: '' }, ...junctionFieldItems.value]);
+    const pageFieldItems = computed(() => fieldsByCollection.value[draft.value.pageCollection] ?? []);
+    const optionalPageFieldItems = computed(() => [{ text: 'None', value: '' }, ...pageFieldItems.value]);
 
     watch(
       () => props.value,
@@ -246,9 +253,43 @@ export default defineComponent({
       emitDraft();
     }
 
-    function getFirstAvailableField(items: SelectItem[], preferred: string) {
-      if (items.some((item) => item.value === preferred)) return preferred;
-      return items[0]?.value ?? '';
+    function pickField(items: SelectItem[], candidates: string[], fallback = ''): string {
+      for (const candidate of candidates) {
+        const match = items.find((item) => item.value === candidate);
+        if (match) return match.value;
+      }
+
+      return fallback;
+    }
+
+    function autoDetectJunctionFields() {
+      const fields = fieldsByCollection.value[draft.value.junctionCollection] ?? [];
+      const pageField = pickField(
+        fields,
+        ['parent_page', 'page', 'pages_id', 'page_id', 'pages', 'parent'],
+        draft.value.junctionPageField,
+      );
+
+      draft.value.junctionPageField = pageField;
+      draft.value.junctionItemField = pickField(
+        fields,
+        ['item', 'block', 'block_id', 'collection_item', 'related_item'],
+        fields.find((item) => item.value !== pageField)?.value ?? draft.value.junctionItemField,
+      );
+      draft.value.junctionItemCollectionField = pickField(
+        fields,
+        ['collection', 'item_collection', 'block_collection', 'related_collection'],
+        '',
+      );
+    }
+
+    function autoDetectPageFields() {
+      const fields = fieldsByCollection.value[draft.value.pageCollection] ?? [];
+
+      draft.value.pageTitleField = pickField(fields, ['title', 'name', 'headline', 'label'], draft.value.pageTitleField);
+      draft.value.pageSlugField = pickField(fields, ['slug', 'permalink', 'path', 'url'], '');
+      draft.value.pageStatusField = pickField(fields, ['status', 'state'], '');
+      draft.value.sortField = pickField(fields, ['title', 'sort', 'date_created', 'published_at'], draft.value.pageTitleField);
     }
 
     function onCollectionChange(field: 'junctionCollection' | 'pageCollection', value: string | number | null) {
@@ -256,27 +297,11 @@ export default defineComponent({
       draft.value[field] = normalizedValue;
 
       if (field === 'junctionCollection') {
-        const fields = fieldsByCollection.value[normalizedValue] ?? [];
-        draft.value.junctionPageField = getFirstAvailableField(fields, draft.value.junctionPageField || DEFAULTS.junctionPageField);
-        draft.value.junctionItemField = getFirstAvailableField(fields, draft.value.junctionItemField || DEFAULTS.junctionItemField);
-        draft.value.junctionItemCollectionField = getFirstAvailableField(
-          fields,
-          draft.value.junctionItemCollectionField || DEFAULTS.junctionItemCollectionField,
-        );
+        autoDetectJunctionFields();
       }
 
       if (field === 'pageCollection') {
-        const fields = fieldsByCollection.value[normalizedValue] ?? [];
-        draft.value.pageTitleField = getFirstAvailableField(fields, draft.value.pageTitleField || DEFAULTS.pageTitleField);
-        draft.value.pageSlugField = fields.some((item) => item.value === draft.value.pageSlugField)
-          ? draft.value.pageSlugField
-          : '';
-        draft.value.pageStatusField = fields.some((item) => item.value === draft.value.pageStatusField)
-          ? draft.value.pageStatusField
-          : '';
-        draft.value.sortField = fields.some((item) => item.value === draft.value.sortField)
-          ? draft.value.sortField
-          : draft.value.pageTitleField;
+        autoDetectPageFields();
       }
 
       emitDraft();
@@ -290,7 +315,7 @@ export default defineComponent({
         const collectionsResponse = await api.get('/collections', {
           params: {
             limit: -1,
-            fields: 'collection,meta.icon,meta.hidden',
+            fields: 'collection,meta.hidden',
           },
         });
 
@@ -336,8 +361,9 @@ export default defineComponent({
           draft.value.pageCollection = availableCollections[0]?.value ?? '';
         }
 
-        onCollectionChange('junctionCollection', draft.value.junctionCollection);
-        onCollectionChange('pageCollection', draft.value.pageCollection);
+        autoDetectJunctionFields();
+        autoDetectPageFields();
+        emitDraft();
       } catch (error) {
         loadError.value =
           error instanceof Error ? error.message : 'Failed to load collections and fields for the options editor.';
@@ -358,8 +384,10 @@ export default defineComponent({
       loading,
       onCollectionChange,
       optionalCollectionItems,
+      optionalJunctionFieldItems,
       optionalPageFieldItems,
       pageFieldItems,
+      showAdvanced,
       updateField,
     };
   },
@@ -401,5 +429,22 @@ export default defineComponent({
 .dreamui-builder-options__hint {
   color: var(--theme--foreground-subdued);
   font-size: 0.75rem;
+}
+
+.dreamui-builder-options__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border: var(--theme--border-width) solid var(--theme--border-color-subdued);
+  border-radius: var(--theme--border-radius);
+  background: var(--theme--background-page);
+  color: var(--theme--foreground-subdued);
+  font-size: 0.875rem;
+}
+
+.dreamui-builder-options__advanced-toggle {
+  display: flex;
+  justify-content: flex-start;
 }
 </style>
